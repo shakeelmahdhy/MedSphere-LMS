@@ -119,7 +119,7 @@ export function AdminDashboard() {
                 <img src="/logo.svg" alt="Medsphere Logo" className="h-12 w-auto" />
               </div>
             ) : (
-              <div className="flex items-center overflow-hidden">
+              <div className="flex items-center overflow-hidden mx-auto">
                 <img src="/logo2.svg" alt="Medsphere Logo" className="h-10 w-auto" />
               </div>
             )}
