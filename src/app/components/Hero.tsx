@@ -11,10 +11,7 @@ export function Hero() {
       <nav className="relative z-10 px-6 lg:px-8 py-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">AC</span>
-            </div>
-            <span className="font-semibold text-xl text-gray-900">Medsphere Learning</span>
+            <img src="/src/imports/2.svg" alt="Medsphere Logo" className="h-10 w-auto" />
           </div>
           
           {/* Desktop Navigation */}
