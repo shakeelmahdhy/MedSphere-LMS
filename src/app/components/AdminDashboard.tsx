@@ -17,7 +17,10 @@ import {
   ArrowLeftRight,
   Calendar,
   MessageSquare,
-  Award
+  Award,
+  ChevronLeft,
+  ChevronRight,
+  HelpCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { notificationsAPI, authAPI } from '../../lib/api';
@@ -107,13 +110,13 @@ export function AdminDashboard() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 ${
-          sidebarOpen ? 'w-72' : 'w-20'
+        className={`fixed top-0 left-0 z-40 h-screen bg-white border-r border-gray-200 transition-all duration-300 ${
+          sidebarOpen ? 'w-64' : 'w-20'
         }`}
       >
-        <div className="h-full px-3 py-4 overflow-y-auto bg-white/80 backdrop-blur-xl border-r border-gray-200/50 shadow-xl">
-          {/* Logo & Toggle */}
-          <div className="flex items-center justify-between mb-8 px-2">
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
             {sidebarOpen ? (
               <div className="flex items-center overflow-hidden">
                 <img src="/logo.svg" alt="Medsphere Logo" className="h-12 w-auto" />
@@ -123,16 +126,18 @@ export function AdminDashboard() {
                 <img src="/logo2.svg" alt="Medsphere Logo" className="h-10 w-auto" />
               </div>
             )}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
           </div>
 
-          {/* Navigation */}
-          <nav className="space-y-2">
+          {/* Toggle Button */}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="absolute -right-3 top-20 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-700 transition-colors shadow-lg"
+          >
+            {sidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+          </button>
+
+          {/* Main Menu */}
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.path, item.exact);
@@ -141,28 +146,37 @@ export function AdminDashboard() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                     active
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-105'
-                      : 'text-gray-700 hover:bg-gray-100 hover:scale-105'
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                      : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  <Icon size={22} className={active ? 'text-white' : 'text-gray-500 group-hover:text-blue-600'} />
+                  <Icon size={20} className="flex-shrink-0" />
                   {sidebarOpen && (
-                    <span className={`font-medium ${active ? 'text-white' : ''}`}>
-                      {item.label}
-                    </span>
+                    <span className="font-medium">{item.label}</span>
                   )}
                 </Link>
               );
             })}
           </nav>
 
+          {/* Bottom Menu */}
+          <div className="p-4 border-t border-gray-200 space-y-2">
+            {/* Logout */}
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-gray-700 hover:bg-red-50 hover:text-red-600"
+            >
+              <LogOut size={20} className="flex-shrink-0" />
+              {sidebarOpen && <span className="font-medium">Logout</span>}
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className={`transition-all duration-300 ${sidebarOpen ? 'ml-72' : 'ml-20'}`}>
+      <div className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
         {/* Top Header */}
         <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm">
           <div className="px-6 py-4">
