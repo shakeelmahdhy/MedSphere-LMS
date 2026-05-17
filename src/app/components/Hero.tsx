@@ -1,7 +1,6 @@
-import { ImageWithFallback } from './figma/ImageWithFallback';
-import { ArrowRight, Menu, X } from 'lucide-react';
 import { useState } from 'react';
-
+import { ArrowRight, Menu, X } from 'lucide-react';
+import { ImageWithFallback } from './figma/ImageWithFallback';
 
 export function Hero() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -9,10 +8,10 @@ export function Hero() {
   return (
     <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 overflow-hidden">
       {/* Navigation */}
-      <nav className="relative z-10 px-6 lg:px-8 py-6">
+      <nav className="relative z-10 px-6 lg:px-8 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src="/logo.svg" alt="Medsphere Logo" className="h-30 w-auto" />
+          <div className="flex items-center">
+            <img src="/logo.svg" alt="Medsphere Logo" className="h-12 w-auto" />
           </div>
           
           {/* Desktop Navigation */}
