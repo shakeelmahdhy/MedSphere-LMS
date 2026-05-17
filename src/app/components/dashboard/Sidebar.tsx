@@ -79,15 +79,12 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           {/* Logo */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             {isOpen ? (
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">AC</span>
-                </div>
-                <span className="font-semibold text-lg text-gray-900">Medsphere</span>
+              <div className="flex items-center overflow-hidden">
+                <img src="/logo.svg" alt="Medsphere Logo" className="h-12 w-auto" />
               </div>
             ) : (
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mx-auto">
-                <span className="text-white font-bold text-lg">AC</span>
+              <div className="flex items-center overflow-hidden mx-auto">
+                <img src="/logo2.svg" alt="Medsphere Logo" className="h-10 w-auto" />
               </div>
             )}
           </div>

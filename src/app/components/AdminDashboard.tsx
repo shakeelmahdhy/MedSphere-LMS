@@ -115,18 +115,12 @@ export function AdminDashboard() {
           {/* Logo & Toggle */}
           <div className="flex items-center justify-between mb-8 px-2">
             {sidebarOpen ? (
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                  <Shield className="text-white" size={24} />
-                </div>
-                <div>
-                  <h1 className="font-bold text-lg text-gray-900">Admin Portal</h1>
-                  <p className="text-xs text-gray-500">Medsphere Learning</p>
-                </div>
+              <div className="flex items-center overflow-hidden">
+                <img src="/logo.svg" alt="Medsphere Logo" className="h-12 w-auto" />
               </div>
             ) : (
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                <Shield className="text-white" size={24} />
+              <div className="flex items-center overflow-hidden">
+                <img src="/logo2.svg" alt="Medsphere Logo" className="h-10 w-auto" />
               </div>
             )}
             <button
