@@ -11,8 +11,8 @@ export function Hero() {
       {/* Navigation */}
       <nav className="relative z-10 px-6 lg:px-8 py-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center overflow-hidden">
-            <img src="/logo.svg" alt="Medsphere Logo" className="h-20 w-auto" style={{ objectPosition: 'center', transform: 'scale(3)', maxWidth: 'none' }} />
+          <div className="flex items-center gap-2">
+            <img src="/logo.svg" alt="Medsphere Logo" className="h-25 w-auto object-cover" style={{ objectPosition: 'center', transform: 'scale(2)' }} />
           </div>
           
           {/* Desktop Navigation */}
