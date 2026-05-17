@@ -1230,8 +1230,6 @@ async def upload_file(file: UploadFile = File(...), admin: models.User = Depends
         file.file.close()
     
     file_url = f"http://localhost:8000/uploads/course_content/{filename}"
-    base_url = os.environ.get("BASE_URL", "http://localhost:8000")
-    file_url = f"{base_url}/uploads/course_content/{filename}"
     return {"url": file_url, "filename": file.filename}
 
 # ==================== ANALYTICS ROUTES ====================
@@ -1375,5 +1373,3 @@ def delete_admin_certificate(cert_id: int, db: Session = Depends(database.get_db
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)

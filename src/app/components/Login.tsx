@@ -83,7 +83,7 @@ export function Login() {
         {/* Left Side - Branding */}
         <div className="hidden lg:block text-white space-y-8 animate-slide-in-left">
           <div className="flex items-center gap-3 mb-8">
-            <img src="/src/imports/2.svg" alt="Medsphere Logo" className="h-16 w-auto" />
+            <img src="/2.svg" alt="Medsphere Logo" className="h-16 w-auto" />
           </div>
           
           <h1 className="text-5xl font-bold leading-tight">
@@ -139,7 +139,7 @@ export function Login() {
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
             <a href="/" className="inline-flex items-center gap-2 mb-4">
-              <img src="/src/imports/2.svg" alt="Medsphere Logo" className="h-12 w-auto" />
+              <img src="/2.svg" alt="Medsphere Logo" className="h-12 w-auto" />
             </a>
           </div>
 
