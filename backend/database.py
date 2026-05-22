@@ -6,12 +6,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Using SQLite for easier local development (no server required)
-SQLALCHEMY_DATABASE_URL = "sqlite:///./elearning.db"
+# Prioritize DATABASE_URL from environment (Supabase), fallback to SQLite for local dev
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./elearning.db")
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+# SQLAlchemy requires 'postgresql://' instead of 'postgres://' 
+# (Render/Supabase URLs often start with 'postgres://')
+if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# connect_args={"check_same_thread": False} is only required for SQLite
+engine_args = {}
+if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
+    engine_args["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL, **engine_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
