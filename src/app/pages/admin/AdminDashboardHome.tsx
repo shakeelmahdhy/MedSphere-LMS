@@ -65,7 +65,9 @@ export function AdminDashboardHome() {
     },
     {
       title: 'Completion Rate',
-      value: `${data?.course_completion_rate?.toFixed(1)}%` || '0%',
+      value: data?.course_completion_rate != null
+        ? `${Number(data.course_completion_rate).toFixed(1)}%`
+        : '0%',
       change: '+3.1%',
       trend: 'up',
       icon: TrendingUp,
@@ -73,7 +75,9 @@ export function AdminDashboardHome() {
     },
     {
       title: 'Avg Quiz Score',
-      value: `${data?.avg_quiz_score}%` || '0%',
+      value: data?.avg_quiz_score != null
+        ? `${Number(data.avg_quiz_score).toFixed(1)}%`
+        : '0%',
       change: '+15.7%',
       trend: 'up',
       icon: Award,
