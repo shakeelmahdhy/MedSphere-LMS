@@ -91,29 +91,29 @@ export function AdminDashboardHome() {
       icon: Plus,
       color: 'from-blue-500 to-indigo-600',
       description: 'Build from scratch or use AI',
-      link: '/admin/courses'
+      link: '/admin/dashboard/courses?create=true',
     },
     {
       title: 'Course Management',
       icon: BookOpen,
       color: 'from-purple-500 to-pink-600',
       description: 'Edit and publish content',
-      link: '/admin/courses'
+      link: '/admin/dashboard/courses',
     },
     {
       title: 'Add Learners',
       icon: UserPlus,
       color: 'from-green-500 to-teal-600',
       description: 'Add new individual learners',
-      link: '/admin/users'
+      link: '/admin/dashboard/users?add=true',
     },
     {
       title: 'System Settings',
       icon: Settings,
       color: 'from-orange-500 to-red-600',
       description: 'Configure platform settings',
-      link: '/admin/settings'
-    }
+      link: '/admin/dashboard/settings',
+    },
   ];
 
   const iconMap: any = {
