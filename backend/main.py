@@ -19,16 +19,18 @@ def create_notification(db: Session, user_id: int, title: str, message: str):
 
 # Create tables
 models.Base.metadata.create_all(bind=engine)
-
-# Create default channel if none exists
-db = database.SessionLocal()
-if db.query(models.Channel).count() == 0:
-    general_channel = models.Channel(name="General", description="General discussion for all members")
-    db.add(general_channel)
-    db.commit()
-db.close()
-
 app = FastAPI(title="E-Learning API")
+
+@app.on_event("startup")
+def create_default_channel():
+    db = database.SessionLocal()
+    try:
+        if db.query(models.Channel).count() == 0:
+            general_channel = models.Channel(name="General", description="General discussion for all members")
+            db.add(general_channel)
+            db.commit()
+    finally:
+        db.close()
 
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
