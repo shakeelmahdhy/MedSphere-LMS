@@ -11,6 +11,7 @@ import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { resolveMediaUrl } from '../../lib/mediaUrl';
 import { Separator } from '../components/ui/separator';
 import { coursesAPI, userAPI } from '../../lib/api';
 
@@ -208,7 +209,7 @@ export function CourseDetail() {
                   </div>
                   {selectedContent.content_type === 'video' ? (
                     <video 
-                      src={selectedContent.url} 
+                      src={resolveMediaUrl(selectedContent.url)} 
                       controls 
                       className="w-full aspect-video rounded-2xl"
                       controlsList="nodownload"
@@ -219,7 +220,7 @@ export function CourseDetail() {
                   ) : (
                     <div className="bg-white rounded-2xl h-[600px]">
                       <iframe 
-                        src={selectedContent.url} 
+                        src={resolveMediaUrl(selectedContent.url)} 
                         className="w-full h-full rounded-2xl"
                         title={selectedContent.title}
                       />
@@ -303,7 +304,7 @@ export function CourseDetail() {
               <Card className="p-8 border-gray-100 shadow-sm rounded-3xl">
                 <div className="flex items-center gap-6 mb-8">
                   <Avatar className="w-24 h-24 ring-4 ring-blue-50 ring-offset-2">
-                    <AvatarImage src={course.instructor?.profile_picture ? `http://localhost:8000${course.instructor.profile_picture}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(course.instructor?.name || 'Instructor')}&background=random`} />
+                    <AvatarImage src={resolveMediaUrl(course.instructor?.avatar_url) || `https://ui-avatars.com/api/?name=${encodeURIComponent(course.instructor?.name || 'Instructor')}&background=random`} />
                     <AvatarFallback>{course.instructor?.name?.charAt(0) || 'I'}</AvatarFallback>
                   </Avatar>
                   <div>

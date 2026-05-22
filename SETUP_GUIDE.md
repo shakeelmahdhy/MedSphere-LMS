@@ -81,11 +81,11 @@ The frontend is built with **React** and **Vite**.
 
 ## 5. Important Notes
 
-### **Database Persistence**
-The project currently uses a local SQLite database file located at `backend/elearning.db`. This file contains all your current users, courses, and progress. **Do not delete this file** if you want to keep your existing data.
+### **Database**
+For production (Render + Supabase), follow **[SUPABASE_SETUP.md](./SUPABASE_SETUP.md)**. Locally, the app uses SQLite unless you set `DATABASE_URL` to your Supabase Postgres URI.
 
 ### **Uploads**
-All uploaded images (profile pictures, course content) are stored in the `backend/uploads/` directory. Ensure this folder is copied along with the project.
+With Supabase configured, course videos/PDFs and profile pictures are stored in Supabase Storage. Without Supabase env vars, files are saved under `backend/uploads/` instead.
 
 ### **Port Conflicts**
 *   If the backend port (8000) is in use, the backend will fail to start.
