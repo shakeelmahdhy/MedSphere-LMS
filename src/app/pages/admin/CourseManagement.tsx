@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router';
 import { coursesAPI, adminAPI } from '../../../lib/api';
 import {
   Plus,
@@ -33,6 +34,7 @@ import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 
 export function CourseManagement() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'draft' | 'published' | 'archived'>('all');
@@ -149,6 +151,26 @@ export function CourseManagement() {
   useEffect(() => {
     fetchCourses();
   }, [activeTab]);
+
+  useEffect(() => {
+    if (searchParams.get('create') !== 'true') return;
+    setCourseForm({
+      title: '',
+      description: '',
+      price: 0,
+      type: 'Video',
+      category: 'General',
+      duration: '',
+      contents: [],
+      quizzes: [],
+    });
+    setSelectedCourse(null);
+    setCurrentStep(1);
+    setShowCourseModal(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('create');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const fetchCourses = async () => {
     try {

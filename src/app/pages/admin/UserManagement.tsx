@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router';
 import { adminAPI, coursesAPI, messagesAPI } from '../../../lib/api';
 import {
   Users,
@@ -26,6 +27,7 @@ import { UserAvatar } from '../../components/UserAvatar';
 
 
 export function UserManagement() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [learners, setLearners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'inactive'>('all');
@@ -53,6 +55,14 @@ export function UserManagement() {
     fetchUsers();
     fetchGroups();
   }, [activeTab]);
+
+  useEffect(() => {
+    if (searchParams.get('add') !== 'true') return;
+    setShowAddLearnerModal(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('add');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const fetchUsers = async () => {
     try {
