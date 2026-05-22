@@ -16,6 +16,19 @@ def create_notification(db: Session, user_id: int, title: str, message: str):
     db.add(notification)
     # Caller should commit
 
+
+def _utc_now() -> datetime.datetime:
+    return datetime.datetime.now(datetime.timezone.utc)
+
+
+def _normalize_timestamp(dt: Optional[datetime.datetime]) -> datetime.datetime:
+    """Normalize DB datetimes for safe comparison (Postgres returns tz-aware)."""
+    if dt is None:
+        return _utc_now()
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=datetime.timezone.utc)
+    return dt.astimezone(datetime.timezone.utc)
+
 # Create tables
 models.Base.metadata.create_all(bind=engine)
 
@@ -727,50 +740,54 @@ def get_admin_analytics(db: Session = Depends(database.get_db), admin: models.Us
         # 1. New Users
         new_users = db.query(models.User).order_by(models.User.created_at.desc()).limit(5).all()
         for u in new_users:
+            ts = _normalize_timestamp(u.created_at)
             activities.append({
                 "action": "User Registered",
                 "details": f"{u.name} joined as {u.role}",
-                "time": u.created_at.strftime("%b %d, %H:%M"),
+                "time": ts.strftime("%b %d, %H:%M"),
                 "icon": "UserPlus",
                 "color": "bg-green-100 text-green-600",
-                "timestamp": u.created_at
+                "timestamp": ts,
             })
             
         # 2. New Courses
         new_courses = db.query(models.Course).order_by(models.Course.created_at.desc()).limit(5).all()
         for c in new_courses:
+            ts = _normalize_timestamp(c.created_at)
             activities.append({
                 "action": "Course Created",
                 "details": f"'{c.title}' was added",
-                "time": c.created_at.strftime("%b %d, %H:%M"),
+                "time": ts.strftime("%b %d, %H:%M"),
                 "icon": "BookOpen",
                 "color": "bg-blue-100 text-blue-600",
-                "timestamp": c.created_at
+                "timestamp": ts,
             })
             
         # 3. New Enrollments
         new_enrolls = db.query(models.Enrollment).options(joinedload(models.Enrollment.user), joinedload(models.Enrollment.course)).order_by(models.Enrollment.enrolled_at.desc()).limit(5).all()
         for e in new_enrolls:
             if e.user and e.course:
+                ts = _normalize_timestamp(e.enrolled_at)
                 activities.append({
                     "action": "Learner Enrolled",
                     "details": f"{e.user.name} started '{e.course.title}'",
-                    "time": e.enrolled_at.strftime("%b %d, %H:%M"),
+                    "time": ts.strftime("%b %d, %H:%M"),
                     "icon": "Activity",
                     "color": "bg-purple-100 text-purple-600",
-                    "timestamp": e.enrolled_at
+                    "timestamp": ts,
                 })
 
         # 4. New Schedules/Tasks
         new_schedules = db.query(models.Schedule).order_by(models.Schedule.id.desc()).limit(5).all()
         for s in new_schedules:
+            ts = _normalize_timestamp(s.start_time)
             activities.append({
                 "action": "Task Scheduled",
                 "details": s.title,
-                "time": "Recently",
+                "time": ts.strftime("%b %d, %H:%M"),
                 "icon": "Clock",
                 "color": "bg-orange-100 text-orange-600",
-                "timestamp": datetime.datetime.now() # Fallback if no created_at
+                "timestamp": ts,
             })
 
         # Sort all by timestamp
