@@ -6,10 +6,9 @@ from sqlalchemy import func
 from typing import List, Optional
 import os
 import datetime
-import shutil
 from sqlalchemy.orm import Session, joinedload
 
-import models, schemas, auth, database
+import models, schemas, auth, database, storage
 from database import engine
 
 def create_notification(db: Session, user_id: int, title: str, message: str):
@@ -57,7 +56,8 @@ PROFILE_PIX_DIR = os.path.join(UPLOAD_DIR, "profile_pictures")
 COURSE_CONTENT_DIR = os.path.join(UPLOAD_DIR, "course_content")
 os.makedirs(PROFILE_PIX_DIR, exist_ok=True)
 os.makedirs(COURSE_CONTENT_DIR, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+if not storage.storage_enabled():
+    app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 @app.get("/favicon.ico")
 def favicon():
@@ -1203,33 +1203,34 @@ def get_unread_message_count(db: Session = Depends(database.get_db), user: model
 
 @app.post("/api/users/profile-picture")
 async def upload_profile_picture(file: UploadFile = File(...), user: models.User = Depends(auth.get_current_active_user), db: Session = Depends(database.get_db)):
-    file_extension = os.path.splitext(file.filename)[1]
+    file_extension = os.path.splitext(file.filename or "")[1]
     filename = f"user_{user.id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}{file_extension}"
-    file_path = os.path.join(PROFILE_PIX_DIR, filename)
-    
-    with open(file_path, "wb") as buffer:
+
+    if storage.storage_enabled():
+        user.avatar_url = await storage.upload_profile_picture(file, filename)
+    else:
         content = await file.read()
-        buffer.write(content)
-    
-    user.avatar_url = f"/uploads/profile_pictures/{filename}"
+        await file.close()
+        user.avatar_url = storage.save_profile_picture_local(
+            content, PROFILE_PIX_DIR, filename
+        )
+
     db.commit()
     return {"url": user.avatar_url}
 
 
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...), admin: models.User = Depends(auth.get_admin_user)):
-    print(f"DEBUG: Received upload request for file: {file.filename}")
-    file_extension = os.path.splitext(file.filename)[1]
+    file_extension = os.path.splitext(file.filename or "")[1]
     filename = f"content_{datetime.datetime.now().strftime('%Y%m%d%H%M%S_%f')}{file_extension}"
-    file_path = os.path.join(COURSE_CONTENT_DIR, filename)
-    
-    try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-    finally:
-        file.file.close()
-    
-    file_url = f"http://localhost:8000/uploads/course_content/{filename}"
+
+    if storage.storage_enabled():
+        file_url = await storage.upload_course_content(file, filename)
+    else:
+        file_url = storage.save_course_content_local(
+            file, COURSE_CONTENT_DIR, filename
+        )
+
     return {"url": file_url, "filename": file.filename}
 
 # ==================== ANALYTICS ROUTES ====================
