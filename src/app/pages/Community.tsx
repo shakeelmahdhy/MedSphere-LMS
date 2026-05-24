@@ -12,7 +12,6 @@ import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
-import { resolveMediaUrl } from '../../lib/mediaUrl';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { Separator } from '../components/ui/separator';
 import { communityAPI, authAPI, messagesAPI } from '../../lib/api';
@@ -465,10 +464,7 @@ export function Community() {
                         }}
                         className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                      <Avatar className="w-8 h-8">
-                        <AvatarImage src={resolveMediaUrl(user.avatar_url)} />
-                        <AvatarFallback>{user.name[0]}</AvatarFallback>
-                      </Avatar>
+                      <UserAvatar user={user} className="w-8 h-8" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
                         <p className="text-[10px] text-gray-500 uppercase tracking-wider">{user.role}</p>

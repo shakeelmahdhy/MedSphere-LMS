@@ -264,6 +264,7 @@ export interface CreateUserRequest {
   password: string;
   role: string;
   organization?: string;
+  group_id?: number | null;
 }
 
 export const adminAPI = {
@@ -283,7 +284,7 @@ export const adminAPI = {
   getUser: (id: string) => apiClient<any>(`/admin/users/${id}`),
 
   createUser: (data: CreateUserRequest) =>
-    apiClient<{ success: boolean }>('/admin/users', {
+    apiClient<{ success: boolean; user?: { id: number } }>('/admin/users', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -305,10 +306,13 @@ export const adminAPI = {
       body: JSON.stringify({ user_ids: userIds, course_id: courseId, due_date: dueDate }),
     }),
 
-  bulkAssignGroup: (userIds: string[], groupId: string) =>
+  bulkAssignGroup: (userIds: (string | number)[], groupId: string | number) =>
     apiClient<{ success: boolean }>('/admin/users/bulk-assign-group', {
       method: 'POST',
-      body: JSON.stringify({ user_ids: userIds, group_id: groupId }),
+      body: JSON.stringify({
+        user_ids: userIds.map((id) => Number(id)),
+        group_id: Number(groupId),
+      }),
     }),
 
   // Groups
@@ -594,10 +598,14 @@ export const learnerAPI = {
 
 export const scheduleAPI = {
   getSchedules: () => apiClient<any[]>('/schedules'),
-  createSchedule: (data: any) => apiClient<any>('/admin/schedules', {
+  createSchedule: (data: any) => apiClient<any>('/schedules', {
     method: 'POST',
-    body: JSON.stringify(data)
-  })
+    body: JSON.stringify(data),
+  }),
+  deleteSchedule: (id: string | number) =>
+    apiClient<{ success: boolean }>(`/schedules/${id}`, {
+      method: 'DELETE',
+    }),
 };
 
 // Export all APIs

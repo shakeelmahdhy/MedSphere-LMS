@@ -184,6 +184,7 @@ export function TeamManagement() {
 
   const handleViewTeam = async (team: any) => {
     try {
+      setTeamCourses([]);
       setSelectedTeam(team);
       const courses = await adminAPI.getTeamCourses(team.id);
       setTeamCourses(courses);
@@ -377,7 +378,7 @@ export function TeamManagement() {
                         <p className="text-xs text-gray-600">Members</p>
                       </div>
                       <div className="bg-purple-50 rounded-xl p-3">
-                        <p className="text-2xl font-bold text-purple-600">0</p>
+                        <p className="text-2xl font-bold text-purple-600">{team.course_count ?? 0}</p>
                         <p className="text-xs text-gray-600">Courses</p>
                       </div>
                       <div className="bg-green-50 rounded-xl p-3">

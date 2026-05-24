@@ -38,7 +38,9 @@ export function BrowseCourses() {
   const handleBuy = async (courseId: number, title: string) => {
     try {
       await coursesAPI.buy(courseId.toString());
-      toast.success(`Successfully purchased "${title}"!`);
+      const enrollments = await userAPI.getMyCourses();
+      setMyCourses(enrollments);
+      toast.success(`Successfully enrolled in "${title}"!`);
       navigate(`/dashboard/courses/${courseId}`);
     } catch (error) {
       toast.error('Failed to complete purchase');

@@ -29,6 +29,56 @@ def _normalize_timestamp(dt: Optional[datetime.datetime]) -> datetime.datetime:
         return dt.replace(tzinfo=datetime.timezone.utc)
     return dt.astimezone(datetime.timezone.utc)
 
+
+def _display_enrollment_status(enrollment: models.Enrollment) -> str:
+    progress = enrollment.progress or 0.0
+    if enrollment.status == "completed" or progress >= 100:
+        return "completed"
+    if enrollment.status == "in-progress" or progress > 0:
+        return "in-progress"
+    return "not-started"
+
+
+def _serialize_enrollment(enrollment: models.Enrollment) -> dict:
+    data = schemas.EnrollmentWithCourse.model_validate(enrollment).model_dump()
+    data["status"] = _display_enrollment_status(enrollment)
+    return data
+
+
+def _team_course_stats(db: Session, team: models.Team) -> tuple[list, int]:
+    member_ids = [m.id for m in team.members]
+    if team.admin_id and team.admin_id not in member_ids:
+        member_ids.append(team.admin_id)
+    if not member_ids:
+        return [], 0
+
+    enrollments = (
+        db.query(models.Enrollment)
+        .options(joinedload(models.Enrollment.course))
+        .filter(models.Enrollment.user_id.in_(member_ids))
+        .all()
+    )
+
+    courses_dict = {}
+    for e in enrollments:
+        if not e.course:
+            continue
+        if e.course.id not in courses_dict:
+            courses_dict[e.course.id] = {
+                "id": e.course.id,
+                "title": e.course.title,
+                "thumbnail_url": e.course.thumbnail_url,
+                "category": e.course.category,
+                "enrollment_count": 0,
+                "completion_count": 0,
+            }
+        courses_dict[e.course.id]["enrollment_count"] += 1
+        if e.status == "completed" or (e.progress or 0) >= 100:
+            courses_dict[e.course.id]["completion_count"] += 1
+
+    courses = list(courses_dict.values())
+    return courses, len(courses)
+
 # Create tables
 models.Base.metadata.create_all(bind=engine)
 
@@ -293,11 +343,15 @@ def buy_course(course_id: int, db: Session = Depends(database.get_db), user: mod
     
     if existing:
         existing.payment_status = "paid"
+        if existing.status == "enrolled":
+            existing.status = "not-started" if (existing.progress or 0) == 0 else "in-progress"
     else:
         new_enrollment = models.Enrollment(
             user_id=user.id,
             course_id=course_id,
-            payment_status="paid"
+            status="not-started",
+            progress=0.0,
+            payment_status="paid",
         )
         db.add(new_enrollment)
     
@@ -439,9 +493,18 @@ def get_course_enrollments(course_id: int, db: Session = Depends(database.get_db
 
 # ==================== USER / LEARNER ROUTES ====================
 
-@app.get("/api/users/me/courses", response_model=List[schemas.Enrollment])
+@app.get("/api/users/me/courses")
 def get_my_courses(db: Session = Depends(database.get_db), user: models.User = Depends(auth.get_current_active_user)):
-    return db.query(models.Enrollment).filter(models.Enrollment.user_id == user.id).all()
+    enrollments = (
+        db.query(models.Enrollment)
+        .options(
+            joinedload(models.Enrollment.course),
+            joinedload(models.Enrollment.completed_contents),
+        )
+        .filter(models.Enrollment.user_id == user.id)
+        .all()
+    )
+    return [_serialize_enrollment(e) for e in enrollments]
 
 @app.get("/api/users/me/courses/{course_id}/progress")
 def get_course_progress(course_id: int, db: Session = Depends(database.get_db), user: models.User = Depends(auth.get_current_active_user)):
@@ -491,40 +554,25 @@ def get_learner_analytics(db: Session = Depends(database.get_db), user: models.U
 
 @app.get("/api/admin/team-learning-stats/{team_id}")
 def get_team_courses(team_id: int, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.get_admin_user)):
-    team = db.query(models.Team).filter(models.Team.id == team_id).first()
-    if not team: return []
-    
-    member_ids = [m.id for m in team.members]
-    if not member_ids: return []
-    
-    # Get all unique courses enrolled by team members
-    enrollments = db.query(models.Enrollment).options(joinedload(models.Enrollment.course)).filter(
-        models.Enrollment.user_id.in_(member_ids)
-    ).all()
-    
-    courses_dict = {}
-    for e in enrollments:
-        if not e.course: continue
-        if e.course.id not in courses_dict:
-            courses_dict[e.course.id] = {
-                "id": e.course.id,
-                "title": e.course.title,
-                "thumbnail_url": e.course.thumbnail_url,
-                "category": e.course.category,
-                "enrollment_count": 0,
-                "completion_count": 0
-            }
-        courses_dict[e.course.id]["enrollment_count"] += 1
-        if e.status == "completed":
-            courses_dict[e.course.id]["completion_count"] += 1
-            
-    return list(courses_dict.values())
+    team = (
+        db.query(models.Team)
+        .options(joinedload(models.Team.members))
+        .filter(models.Team.id == team_id)
+        .first()
+    )
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    courses, _ = _team_course_stats(db, team)
+    return courses
 
-@app.get("/api/admin/users", response_model=List[schemas.User])
+@app.get("/api/admin/users", response_model=List[schemas.UserAdmin])
 def get_admin_users(status: Optional[str] = None, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.get_admin_user)):
     print(f"DEBUG: get_admin_users called by {admin.email}")
     try:
-        query = db.query(models.User)
+        query = db.query(models.User).options(
+            joinedload(models.User.group),
+            joinedload(models.User.enrollments),
+        )
         if status == "active": query = query.filter(models.User.is_active == True)
         elif status == "inactive": query = query.filter(models.User.is_active == False)
         users = query.all()
@@ -536,9 +584,14 @@ def get_admin_users(status: Optional[str] = None, db: Session = Depends(database
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/admin/users/{user_id}", response_model=schemas.User)
+@app.get("/api/admin/users/{user_id}", response_model=schemas.UserAdmin)
 def get_admin_user(user_id: int, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.get_admin_user)):
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = (
+        db.query(models.User)
+        .options(joinedload(models.User.group), joinedload(models.User.enrollments))
+        .filter(models.User.id == user_id)
+        .first()
+    )
     if not user: raise HTTPException(status_code=404, detail="User not found")
     return user
 
@@ -546,19 +599,38 @@ def get_admin_user(user_id: int, db: Session = Depends(database.get_db), admin: 
 def admin_create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.get_admin_user)):
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user: raise HTTPException(status_code=400, detail="Email exists")
-    new_user = models.User(name=user.name, email=user.email, password_hash=auth.get_password_hash(user.password), role=user.role)
+    new_user = models.User(
+        name=user.name,
+        email=user.email,
+        password_hash=auth.get_password_hash(user.password),
+        role=user.role,
+        group_id=user.group_id,
+    )
     db.add(new_user)
     db.commit()
-    return {"success": True}
+    db.refresh(new_user)
+    created = (
+        db.query(models.User)
+        .options(joinedload(models.User.group), joinedload(models.User.enrollments))
+        .filter(models.User.id == new_user.id)
+        .first()
+    )
+    return {"success": True, "user": schemas.UserAdmin.model_validate(created)}
 
 @app.put("/api/admin/users/{user_id}")
 def admin_update_user(user_id: int, data: schemas.UserUpdate, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.get_admin_user)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user: raise HTTPException(status_code=404, detail="User not found")
-    for key, value in data.dict(exclude_unset=True).items():
+    for key, value in data.model_dump(exclude_unset=True).items():
         setattr(user, key, value)
     db.commit()
-    return {"success": True}
+    updated = (
+        db.query(models.User)
+        .options(joinedload(models.User.group), joinedload(models.User.enrollments))
+        .filter(models.User.id == user_id)
+        .first()
+    )
+    return {"success": True, "user": schemas.UserAdmin.model_validate(updated)}
 
 @app.delete("/api/admin/users/{user_id}")
 def delete_admin_user(user_id: int, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.get_admin_user)):
@@ -579,14 +651,24 @@ def bulk_assign_course(data: schemas.BulkAssignCourseRequest, db: Session = Depe
     for user_id in data.user_ids:
         existing = db.query(models.Enrollment).filter(models.Enrollment.user_id == user_id, models.Enrollment.course_id == data.course_id).first()
         if not existing:
-            db.add(models.Enrollment(user_id=user_id, course_id=data.course_id, due_date=data.due_date))
+            db.add(models.Enrollment(
+                user_id=user_id,
+                course_id=data.course_id,
+                due_date=data.due_date,
+                status="not-started",
+                progress=0.0,
+                payment_status="paid",
+            ))
             create_notification(db, user_id, "New Course Assigned", f"You have been assigned to: {course.title if course else 'a new course'}")
     db.commit()
     return {"success": True}
 
 @app.post("/api/admin/users/bulk-assign-group")
 def bulk_assign_group(data: schemas.BulkAssignGroupRequest, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.get_admin_user)):
-    db.query(models.User).filter(models.User.id.in_(data.user_ids)).update({models.User.group_id: data.group_id}, synchronize_session=False)
+    user_ids = [int(uid) for uid in data.user_ids]
+    db.query(models.User).filter(models.User.id.in_(user_ids)).update(
+        {models.User.group_id: data.group_id}, synchronize_session=False
+    )
     db.commit()
     return {"success": True}
 
@@ -608,10 +690,17 @@ def test_stats():
 
 @app.get("/api/admin/teams", response_model=List[schemas.Team])
 def get_admin_teams(db: Session = Depends(database.get_db), admin: models.User = Depends(auth.get_admin_user)):
-    return db.query(models.Team).options(
+    teams = db.query(models.Team).options(
         joinedload(models.Team.admin),
-        joinedload(models.Team.members)
+        joinedload(models.Team.members),
     ).all()
+    result = []
+    for team in teams:
+        team_data = schemas.Team.model_validate(team)
+        _, course_count = _team_course_stats(db, team)
+        team_data.course_count = course_count
+        result.append(team_data)
+    return result
 
 @app.post("/api/admin/teams", response_model=schemas.Team)
 def create_admin_team(team: schemas.TeamCreate, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.get_admin_user)):
@@ -951,29 +1040,6 @@ def get_user_dashboard(db: Session = Depends(database.get_db), current_user: mod
         "upcoming_tasks": upcoming_tasks[:5]
     }
 
-@app.get("/api/users/me/courses", response_model=List[schemas.Enrollment])
-def get_my_courses(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    return db.query(models.Enrollment).filter(models.Enrollment.user_id == current_user.id).all()
-
-@app.post("/api/courses/{course_id}/buy")
-def buy_course(course_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    # Check if already enrolled
-    existing = db.query(models.Enrollment).filter(models.Enrollment.user_id == current_user.id, models.Enrollment.course_id == course_id).first()
-    if existing:
-        return {"success": True, "message": "Already enrolled"}
-    
-    new_enrollment = models.Enrollment(
-        user_id=current_user.id,
-        course_id=course_id,
-        status="in-progress",
-        progress=0.0,
-        payment_status="paid"
-    )
-    db.add(new_enrollment)
-    db.commit()
-    db.commit()
-    return {"success": True}
-
 @app.patch("/api/enrollments/{enrollment_id}/progress")
 def update_enrollment_progress(enrollment_id: int, data: dict, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     enrollment = db.query(models.Enrollment).filter(models.Enrollment.id == enrollment_id, models.Enrollment.user_id == current_user.id).first()
@@ -1255,6 +1321,37 @@ async def upload_file(file: UploadFile = File(...), admin: models.User = Depends
 @app.get("/api/schedules", response_model=List[schemas.Schedule])
 def get_schedules(db: Session = Depends(database.get_db), user: models.User = Depends(auth.get_current_active_user)):
     return db.query(models.Schedule).filter(models.Schedule.user_id == user.id).all()
+
+
+@app.post("/api/schedules", response_model=schemas.Schedule)
+def create_my_schedule(
+    schedule: schemas.ScheduleCreateSelf,
+    db: Session = Depends(database.get_db),
+    user: models.User = Depends(auth.get_current_active_user),
+):
+    new_schedule = models.Schedule(user_id=user.id, **schedule.model_dump())
+    db.add(new_schedule)
+    db.commit()
+    db.refresh(new_schedule)
+    return new_schedule
+
+
+@app.delete("/api/schedules/{schedule_id}")
+def delete_my_schedule(
+    schedule_id: int,
+    db: Session = Depends(database.get_db),
+    user: models.User = Depends(auth.get_current_active_user),
+):
+    schedule = (
+        db.query(models.Schedule)
+        .filter(models.Schedule.id == schedule_id, models.Schedule.user_id == user.id)
+        .first()
+    )
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    db.delete(schedule)
+    db.commit()
+    return {"success": True}
 
 @app.get("/api/learner/analytics")
 def get_learner_analytics(db: Session = Depends(database.get_db), user: models.User = Depends(auth.get_current_active_user)):

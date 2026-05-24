@@ -49,6 +49,9 @@ export function UserManagement() {
   });
 
   const [groups, setGroups] = useState<any[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<any>(null);
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
 
   useEffect(() => {
@@ -92,33 +95,25 @@ export function UserManagement() {
 
   const handleSaveLearner = async () => {
     try {
+      const groupId = learnerForm.group ? Number(learnerForm.group) : null;
+
       if (selectedLearner) {
         await adminAPI.updateUser(selectedLearner.id, {
           name: learnerForm.name,
           email: learnerForm.email,
           role: learnerForm.role,
-          is_active: true
+          is_active: true,
+          group_id: groupId,
         });
-        
-        // Update group if changed
-        if (learnerForm.group) {
-          await adminAPI.bulkAssignGroup([selectedLearner.id.toString()], learnerForm.group);
-        }
-        
         toast.success('User updated successfully!');
       } else {
-        const response: any = await adminAPI.createUser({
+        await adminAPI.createUser({
           name: learnerForm.name,
           email: learnerForm.email,
           password: learnerForm.password,
-          role: learnerForm.role
-        });
-        
-        // If a group was selected during creation, assign it
-        if (learnerForm.group && response.user?.id) {
-          await adminAPI.bulkAssignGroup([response.user.id.toString()], learnerForm.group);
-        }
-        
+          role: learnerForm.role,
+          group_id: groupId ?? undefined,
+        } as any);
         toast.success('User created successfully!');
       }
       setShowAddLearnerModal(false);
@@ -192,6 +187,20 @@ export function UserManagement() {
     setOpenMenuId(null);
   };
 
+  const filteredLearners = learners.filter((learner) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      learner.name?.toLowerCase().includes(q) ||
+      learner.email?.toLowerCase().includes(q) ||
+      learner.group?.name?.toLowerCase().includes(q)
+    );
+  });
+
+  const groupMembers = selectedGroup
+    ? learners.filter((l) => l.group_id === selectedGroup.id)
+    : [];
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -233,7 +242,10 @@ export function UserManagement() {
           {groups.length > 0 ? groups.map((group, index) => (
             <div
               key={group.id}
-              onClick={() => toast.info(`Viewing ${group.name}`)}
+              onClick={() => {
+                setSelectedGroup(group);
+                setShowGroupModal(true);
+              }}
               className="group p-6 rounded-xl bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 hover:border-blue-300 transition-all duration-300 hover:scale-105 hover:shadow-lg cursor-pointer"
             >
               <div className={`w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-md`}>
@@ -241,6 +253,9 @@ export function UserManagement() {
               </div>
               <h3 className="font-semibold text-gray-900 mb-1">{group.name}</h3>
               <p className="text-sm text-gray-600">{group.location}</p>
+              <p className="text-xs text-blue-600 font-medium mt-2">
+                {learners.filter((l) => l.group_id === group.id).length} learners
+              </p>
             </div>
           )) : (
             <div className="col-span-5 text-center py-8 text-gray-500">No groups found</div>
@@ -256,6 +271,8 @@ export function UserManagement() {
             <input
               type="text"
               placeholder="Search by name, email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
             />
           </div>
@@ -294,7 +311,14 @@ export function UserManagement() {
                 </tr>
               </thead>
               <tbody>
-                {learners.map((learner) => {
+                {filteredLearners.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-gray-500">
+                      No learners match your search.
+                    </td>
+                  </tr>
+                )}
+                {filteredLearners.map((learner) => {
                   const enrolledCount = learner.enrollments?.length || 0;
                   const completedCount = learner.enrollments?.filter((e: any) => e.status === 'completed').length || 0;
                   
@@ -571,6 +595,45 @@ export function UserManagement() {
                 className="px-6 py-3 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-xl hover:from-green-700 hover:to-teal-700 transition-all shadow-lg font-semibold"
               >
                 Send Message
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showGroupModal && selectedGroup && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg animate-scale-in max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{selectedGroup.name}</h2>
+                <p className="text-sm text-gray-600">{selectedGroup.location}</p>
+              </div>
+              <button onClick={() => setShowGroupModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 space-y-3">
+              {groupMembers.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">No learners in this group yet.</p>
+              ) : (
+                groupMembers.map((learner) => (
+                  <div key={learner.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <UserAvatar user={learner} className="w-10 h-10" />
+                    <div>
+                      <p className="font-semibold text-gray-900">{learner.name}</p>
+                      <p className="text-xs text-gray-500">{learner.email}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowGroupModal(false)}
+                className="w-full px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium"
+              >
+                Close
               </button>
             </div>
           </div>
