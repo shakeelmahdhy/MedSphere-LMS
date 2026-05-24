@@ -10,8 +10,8 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { resolveMediaUrl } from '../../lib/mediaUrl';
+import { UserAvatar } from '../components/UserAvatar';
 import { Separator } from '../components/ui/separator';
 import { coursesAPI, userAPI } from '../../lib/api';
 
@@ -303,10 +303,7 @@ export function CourseDetail() {
             <TabsContent value="instructor" className="mt-6 animate-in fade-in duration-500">
               <Card className="p-8 border-gray-100 shadow-sm rounded-3xl">
                 <div className="flex items-center gap-6 mb-8">
-                  <Avatar className="w-24 h-24 ring-4 ring-blue-50 ring-offset-2">
-                    <AvatarImage src={resolveMediaUrl(course.instructor?.avatar_url) || `https://ui-avatars.com/api/?name=${encodeURIComponent(course.instructor?.name || 'Instructor')}&background=random`} />
-                    <AvatarFallback>{course.instructor?.name?.charAt(0) || 'I'}</AvatarFallback>
-                  </Avatar>
+                  <UserAvatar user={course.instructor} className="w-24 h-24 ring-4 ring-blue-50 ring-offset-2" />
                   <div>
                     <h3 className="text-2xl font-black text-gray-900">{course.instructor?.name || 'Expert Instructor'}</h3>
                     <p className="text-blue-600 font-bold uppercase tracking-widest text-sm">Course Creator</p>

@@ -22,10 +22,12 @@ export function Schedule() {
     title: '',
     type: 'lesson',
     date: '',
-    time: '',
+    startTime: '09:00',
+    endTime: '10:00',
     location: '',
     description: ''
   });
+  const [typeFilter, setTypeFilter] = useState<string>('all');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -77,11 +79,15 @@ export function Schedule() {
   };
 
   const handleAddEvent = async () => {
-    if (newEvent.title && newEvent.date && newEvent.time) {
+    if (newEvent.title && newEvent.date && newEvent.startTime) {
       try {
-        const start_time = new Date(`${newEvent.date}T${newEvent.time.split(' - ')[0] || '09:00'}`);
-        const end_time = new Date(`${newEvent.date}T${newEvent.time.split(' - ')[1] || '10:00'}`);
-        
+        const start_time = new Date(`${newEvent.date}T${newEvent.startTime}`);
+        const end_time = new Date(`${newEvent.date}T${newEvent.endTime || newEvent.startTime}`);
+        if (Number.isNaN(start_time.getTime()) || Number.isNaN(end_time.getTime())) {
+          toast.error('Invalid date or time');
+          return;
+        }
+
         const event = await scheduleAPI.createSchedule({
           title: newEvent.title,
           type: newEvent.type,
@@ -89,11 +95,20 @@ export function Schedule() {
           start_time: start_time.toISOString(),
           end_time: end_time.toISOString(),
           location: newEvent.location || 'Online',
-          user_id: currentUser.id
         });
-        
-        setEvents(prev => [...prev, event]);
-        setNewEvent({ title: '', type: 'lesson', date: '', time: '', location: '', description: '' });
+
+        setEvents((prev) => [...prev, event].sort(
+          (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+        ));
+        setNewEvent({
+          title: '',
+          type: 'lesson',
+          date: '',
+          startTime: '09:00',
+          endTime: '10:00',
+          location: '',
+          description: '',
+        });
         setShowAddEvent(false);
         toast.success(`Event "${event.title}" added successfully!`);
       } catch (error) {
@@ -104,11 +119,43 @@ export function Schedule() {
     }
   };
 
-  const handleDeleteEvent = (eventId: number) => {
-    // In a real app, call API
-    setEvents(prev => prev.filter(e => e.id !== eventId));
-    toast.success(`Event deleted successfully!`);
+  const handleDeleteEvent = async (eventId: number) => {
+    try {
+      await scheduleAPI.deleteSchedule(eventId);
+      setEvents((prev) => prev.filter((e) => e.id !== eventId));
+      toast.success('Event deleted successfully!');
+    } catch {
+      toast.error('Failed to delete event');
+    }
   };
+
+  const isSameDay = (a: Date, b: Date) =>
+    a.getDate() === b.getDate() &&
+    a.getMonth() === b.getMonth() &&
+    a.getFullYear() === b.getFullYear();
+
+  const filteredEvents = events.filter((e) => {
+    if (typeFilter !== 'all' && e.type !== typeFilter) return false;
+    const eventDate = new Date(e.start_time);
+    if (view === 'day' && date) return isSameDay(eventDate, date);
+    if (view === 'week') {
+      const anchor = date || new Date();
+      const start = new Date(anchor);
+      start.setDate(anchor.getDate() - anchor.getDay());
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      return eventDate >= start && eventDate <= end;
+    }
+    if (view === 'month') {
+      return (
+        eventDate.getMonth() === currentMonth.getMonth() &&
+        eventDate.getFullYear() === currentMonth.getFullYear()
+      );
+    }
+    return true;
+  });
 
   const handleTodayItemClick = (item: any) => {
     toast.info(`Event: ${item.title} at ${new Date(item.start_time).toLocaleTimeString()}`);
@@ -116,26 +163,27 @@ export function Schedule() {
 
   const monthName = currentMonth.toLocaleDateString('en-AU', { month: 'long', year: 'numeric' });
 
-  const todayEvents = events.filter(e => {
+  const todayEvents = filteredEvents.filter((e) => {
     const d = new Date(e.start_time);
-    const today = new Date();
-    return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+    const target = date || new Date();
+    return isSameDay(d, target);
   });
 
-  const thisWeekEvents = events.filter(e => {
+  const thisWeekEvents = filteredEvents.filter((e) => {
     const eventDate = new Date(e.start_time);
-    const today = new Date();
-    
+    const today = date || new Date();
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
-    
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
-    
     return eventDate >= startOfWeek && eventDate <= endOfWeek;
   });
+
+  const upcomingEvents = [...filteredEvents].sort(
+    (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+  );
 
   return (
     <div className="space-y-6 animate-slide-in">
@@ -226,9 +274,19 @@ export function Schedule() {
                     <TabsTrigger value="month">Month</TabsTrigger>
                   </TabsList>
                 </Tabs>
-                <Button variant="outline" size="sm" onClick={() => toast.info('Filter options coming soon!')}>
-                  <Filter size={16} />
-                </Button>
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="h-9 px-3 border border-gray-200 rounded-lg text-sm"
+                  aria-label="Filter by event type"
+                >
+                  <option value="all">All types</option>
+                  <option value="lesson">Lessons</option>
+                  <option value="workshop">Workshops</option>
+                  <option value="assessment">Assessments</option>
+                  <option value="meeting">Meetings</option>
+                  <option value="training">Training</option>
+                </select>
               </div>
             </div>
           </Card>
@@ -277,9 +335,9 @@ export function Schedule() {
               <Button variant="link" className="text-blue-600" onClick={() => toast.info(`${events.length} total events`)}>View All</Button>
             </div>
             <div className="space-y-3">
-              {events.length === 0 ? (
+              {upcomingEvents.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">No upcoming events</p>
-              ) : events.map((event) => (
+              ) : upcomingEvents.map((event) => (
                 <Card
                   key={event.id}
                   className={`p-4 border-2 ${getEventColor(event.type)} hover:shadow-lg transition-all cursor-pointer`}
@@ -417,14 +475,24 @@ export function Schedule() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="eventTime">Time *</Label>
+                  <Label htmlFor="eventStartTime">Start *</Label>
                   <Input
-                    id="eventTime"
-                    placeholder="e.g., 10:00 AM - 12:00 PM"
-                    value={newEvent.time}
-                    onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
+                    id="eventStartTime"
+                    type="time"
+                    value={newEvent.startTime}
+                    onChange={(e) => setNewEvent({ ...newEvent, startTime: e.target.value })}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="eventEndTime">End time</Label>
+                <Input
+                  id="eventEndTime"
+                  type="time"
+                  value={newEvent.endTime}
+                  onChange={(e) => setNewEvent({ ...newEvent, endTime: e.target.value })}
+                />
               </div>
 
               <div className="space-y-2">

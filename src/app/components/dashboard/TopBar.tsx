@@ -3,6 +3,7 @@ import { Search, Bell, Mail, X, Clock, CheckCircle, BookOpen, Award, MessageSqua
 import { useNavigate } from 'react-router';
 import { notificationsAPI, authAPI } from '../../../lib/api';
 import { UserAvatar } from '../UserAvatar';
+import { buildLearnerSearchIndex, filterSearchResults, type SearchResult } from '../../../lib/portalSearch';
 
 
 export function TopBar() {
@@ -14,8 +15,13 @@ export function TopBar() {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showAllNotifications, setShowAllNotifications] = useState(false);
+  const [searchIndex, setSearchIndex] = useState<SearchResult[]>([]);
   const notifRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    buildLearnerSearchIndex().then(setSearchIndex);
+  }, []);
 
   useEffect(() => {
     fetchUser();
@@ -79,16 +85,7 @@ export function TopBar() {
     }
   };
 
-  const searchResults = [
-    { label: 'My Courses', path: '/dashboard/courses', type: 'page' },
-    { label: 'Schedule', path: '/dashboard/schedule', type: 'page' },
-    { label: 'Certificates', path: '/dashboard/certificates', type: 'page' },
-    { label: 'Community', path: '/dashboard/community', type: 'page' },
-    { label: 'Profile', path: '/dashboard/profile', type: 'page' },
-    { label: 'Settings', path: '/dashboard/settings', type: 'page' },
-  ].filter(item => 
-    searchQuery.length > 0 && item.label.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const searchResults = filterSearchResults(searchIndex, searchQuery);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -129,19 +126,28 @@ export function TopBar() {
               </button>
             )}
             {/* Search Results Dropdown */}
-            {showSearchResults && searchResults.length > 0 && (
+            {showSearchResults && searchQuery && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50">
-                {searchResults.map((result, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => { navigate(result.path); setSearchQuery(''); setShowSearchResults(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <Search size={16} className="text-gray-400" />
-                    <span className="text-gray-900">{result.label}</span>
-                    <span className="ml-auto text-xs text-gray-400 capitalize">{result.type}</span>
-                  </button>
-                ))}
+                {searchResults.length > 0 ? (
+                  searchResults.map((result, idx) => (
+                    <button
+                      key={`${result.path}-${idx}`}
+                      onClick={() => { navigate(result.path); setSearchQuery(''); setShowSearchResults(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <Search size={16} className="text-gray-400" />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-gray-900 block truncate">{result.label}</span>
+                        {result.subtitle && (
+                          <span className="text-xs text-gray-500 block truncate">{result.subtitle}</span>
+                        )}
+                      </div>
+                      <span className="ml-auto text-xs text-gray-400 capitalize">{result.type}</span>
+                    </button>
+                  ))
+                ) : (
+                  <p className="px-4 py-3 text-sm text-gray-500">No results found</p>
+                )}
               </div>
             )}
           </div>

@@ -36,6 +36,12 @@ export function MyCourses() {
     fetchCourses();
   }, []);
 
+  const normalizeStatus = (status: string, progress: number) => {
+    if (status === 'completed' || progress >= 100) return 'completed';
+    if (status === 'in-progress' || (status === 'enrolled' && progress > 0)) return 'in-progress';
+    return 'not-started';
+  };
+
   const categories = ['all', ...Array.from(new Set(courses.map(c => c.course?.category || 'General')))];
 
   const filteredCourses = courses.map(enrollment => ({
@@ -47,6 +53,7 @@ export function MyCourses() {
     instructor: 'Expert Instructor', // Placeholder as not in schema yet
     totalLessons: 10,
     completedLessons: Math.floor((enrollment.progress / 100) * 10),
+    status: normalizeStatus(enrollment.status, enrollment.progress || 0),
   })).filter(course => {
     const matchesSearch = (course.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
                          (course.category?.toLowerCase() || '').includes(searchQuery.toLowerCase());
@@ -66,9 +73,9 @@ export function MyCourses() {
 
   const stats = {
     total: courses.length,
-    inProgress: courses.filter(c => c.status === 'in-progress').length,
-    completed: courses.filter(c => c.status === 'completed').length,
-    notStarted: courses.filter(c => c.status === 'not-started').length,
+    inProgress: courses.filter(c => normalizeStatus(c.status, c.progress || 0) === 'in-progress').length,
+    completed: courses.filter(c => normalizeStatus(c.status, c.progress || 0) === 'completed').length,
+    notStarted: courses.filter(c => normalizeStatus(c.status, c.progress || 0) === 'not-started').length,
   };
 
   const navigate = useNavigate();

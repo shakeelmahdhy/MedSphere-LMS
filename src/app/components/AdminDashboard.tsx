@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
 import {
   LayoutDashboard,
@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner';
 import { notificationsAPI, authAPI } from '../../lib/api';
 import { UserAvatar } from './UserAvatar';
+import { buildAdminSearchIndex, filterSearchResults, type SearchResult } from '../../lib/portalSearch';
 
 export function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -34,14 +35,37 @@ export function AdminDashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showAllNotifications, setShowAllNotifications] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchIndex, setSearchIndex] = useState<SearchResult[]>([]);
+  const searchRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
+    buildAdminSearchIndex().then(setSearchIndex);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
     fetchUser();
     fetchNotifications();
+    const handleUserUpdate = () => fetchUser();
+    window.addEventListener('userUpdated', handleUserUpdate);
     const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('userUpdated', handleUserUpdate);
+    };
   }, []);
 
   const fetchUser = async () => {
@@ -52,6 +76,8 @@ export function AdminDashboard() {
       console.error('Error fetching user:', error);
     }
   };
+
+  const searchResults = filterSearchResults(searchIndex, searchQuery);
 
   const fetchNotifications = async () => {
     try {
@@ -182,14 +208,41 @@ export function AdminDashboard() {
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               {/* Search */}
-              <div className="flex-1 max-w-2xl">
+              <div className="flex-1 max-w-2xl" ref={searchRef}>
                 <div className="relative group">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" size={20} />
                   <input
                     type="text"
                     placeholder="Search courses, users, teams..."
+                    value={searchQuery}
+                    onChange={(e) => { setSearchQuery(e.target.value); setShowSearchResults(true); }}
+                    onFocus={() => setShowSearchResults(true)}
                     className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   />
+                  {showSearchResults && searchQuery && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50">
+                      {searchResults.length > 0 ? (
+                        searchResults.map((result, idx) => (
+                          <button
+                            key={`${result.path}-${idx}`}
+                            onClick={() => { navigate(result.path); setSearchQuery(''); setShowSearchResults(false); }}
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left"
+                          >
+                            <Search size={16} className="text-gray-400" />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-gray-900 block truncate">{result.label}</span>
+                              {result.subtitle && (
+                                <span className="text-xs text-gray-500 block truncate">{result.subtitle}</span>
+                              )}
+                            </div>
+                            <span className="text-xs text-gray-400 capitalize">{result.type}</span>
+                          </button>
+                        ))
+                      ) : (
+                        <p className="px-4 py-3 text-sm text-gray-500">No results found</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -17,6 +17,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    group_id: Optional[int] = None
 
 class User(UserBase):
     id: int
@@ -26,6 +27,25 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
+
+class GroupBrief(BaseModel):
+    id: int
+    name: str
+    location: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class UserAdmin(User):
+    group_id: Optional[int] = None
+    group: Optional[GroupBrief] = None
+    enrollments: List["Enrollment"] = []
+
+    class Config:
+        from_attributes = True
+
+
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
@@ -34,6 +54,7 @@ class UserUpdate(BaseModel):
     avatar_url: Optional[str] = None
     settings: Optional[dict] = None
     is_active: Optional[bool] = None
+    group_id: Optional[int] = None
 
 
 class Token(BaseModel):
@@ -195,6 +216,13 @@ class Enrollment(EnrollmentBase):
     class Config:
         from_attributes = True
 
+
+class EnrollmentWithCourse(Enrollment):
+    course: Optional[Course] = None
+
+    class Config:
+        from_attributes = True
+
 # ==================== GROUP SCHEMAS ====================
 
 class GroupBase(BaseModel):
@@ -314,6 +342,7 @@ class Team(TeamBase):
     created_at: datetime
     members: List[User] = []
     admin: Optional[User] = None
+    course_count: int = 0
 
     class Config:
         from_attributes = True
@@ -330,6 +359,11 @@ class ScheduleBase(BaseModel):
 
 class ScheduleCreate(ScheduleBase):
     user_id: int
+
+
+class ScheduleCreateSelf(ScheduleBase):
+    """Learner-created schedule (user_id set server-side)."""
+    pass
 
 class TaskAssign(BaseModel):
     course_id: int
@@ -442,3 +476,6 @@ class UserDashboard(BaseModel):
     recent_activities: List[DashboardActivity]
     continue_learning: List[ContinueLearning]
     upcoming_tasks: List[UpcomingTask]
+
+
+UserAdmin.model_rebuild()

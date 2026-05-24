@@ -59,6 +59,10 @@ export function CourseManagement() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
 
 
 
@@ -301,6 +305,22 @@ export function CourseManagement() {
     }
   };
 
+  const categories = ['all', ...Array.from(new Set(courses.map((c) => c.category || 'General')))];
+  const types = ['all', ...Array.from(new Set(courses.map((c) => c.type).filter(Boolean)))];
+
+  const displayedCourses = courses.filter((course) => {
+    const q = searchQuery.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      course.title?.toLowerCase().includes(q) ||
+      course.type?.toLowerCase().includes(q) ||
+      course.status?.toLowerCase().includes(q) ||
+      course.category?.toLowerCase().includes(q);
+    const matchesType = filterType === 'all' || course.type === filterType;
+    const matchesCategory = filterCategory === 'all' || course.category === filterCategory;
+    return matchesSearch && matchesType && matchesCategory;
+  });
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -372,14 +392,42 @@ export function CourseManagement() {
             <input
               type="text"
               placeholder="Search courses by title, type, or status..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
             />
           </div>
-          <button className="px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors flex items-center gap-2 font-medium">
+          <button
+            type="button"
+            onClick={() => setShowFilters(!showFilters)}
+            className="px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors flex items-center gap-2 font-medium"
+          >
             <Filter size={20} />
             Filters
           </button>
         </div>
+        {showFilters && (
+          <div className="mt-4 flex flex-wrap gap-4">
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="px-4 py-2 border-2 border-gray-200 rounded-xl text-sm"
+            >
+              {types.map((t) => (
+                <option key={t} value={t}>{t === 'all' ? 'All types' : t}</option>
+              ))}
+            </select>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="px-4 py-2 border-2 border-gray-200 rounded-xl text-sm"
+            >
+              {categories.map((c) => (
+                <option key={c} value={c}>{c === 'all' ? 'All categories' : c}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -416,7 +464,14 @@ export function CourseManagement() {
                 </tr>
               </thead>
               <tbody>
-                {courses.map((course) => (
+                {displayedCourses.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-gray-500">
+                      No courses match your search or filters.
+                    </td>
+                  </tr>
+                )}
+                {displayedCourses.map((course) => (
                   <tr key={course.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-4">
                       <div className="font-semibold text-gray-900">{course.title}</div>
