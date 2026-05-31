@@ -45,13 +45,13 @@ Old course content URLs pointing at `localhost:8000` will not work until you re-
 
 3. Add to **Render** environment:
 
-| Variable | Value |
-|----------|--------|
-| `SUPABASE_URL` | `https://xxxx.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_KEY` | service role key |
-| `SUPABASE_COURSE_BUCKET` | `course-content` (optional if using default) |
-| `SUPABASE_PROFILE_BUCKET` | `profile-pictures` (optional) |
-| `PUBLIC_API_URL` | `https://your-backend.onrender.com` |
+| Variable                    | Value                                        |
+|-----------------------------|----------------------------------------------|
+| `SUPABASE_URL`              | `https://xxxx.supabase.co`                   |
+| `SUPABASE_SERVICE_ROLE_KEY` | service role key                             |
+| `SUPABASE_COURSE_BUCKET`    | `course-content` (optional if using default) |
+| `SUPABASE_PROFILE_BUCKET`   | `profile-pictures` (optional)                |
+| `PUBLIC_API_URL`            | `https://your-backend.onrender.com`          |
 
 Uploads from `/api/upload` and `/api/users/profile-picture` go to Supabase and return public URLs like:
 
@@ -61,8 +61,8 @@ Uploads from `/api/upload` and `/api/users/profile-picture` go to Supabase and r
 
 ## 3. Frontend (Vercel)
 
-| Variable | Value |
-|----------|--------|
+| Variable       | Value                                   |
+|----------      |-----------------------------------------|
 | `VITE_API_URL` | `https://your-backend.onrender.com/api` |
 
 Redeploy Vercel after changing env vars.
