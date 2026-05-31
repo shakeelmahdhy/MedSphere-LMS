@@ -6,6 +6,7 @@ from sqlalchemy import func
 from typing import List, Optional
 import os
 import datetime
+import re
 from sqlalchemy.orm import Session, joinedload
 
 import models, schemas, auth, database, storage
@@ -37,6 +38,42 @@ def _display_enrollment_status(enrollment: models.Enrollment) -> str:
     if enrollment.status == "in-progress" or progress > 0:
         return "in-progress"
     return "not-started"
+
+
+def _parse_duration_hours(duration: Optional[str]) -> float:
+    if not duration:
+        return 0.0
+
+    text = duration.lower().strip()
+    total_hours = 0.0
+
+    hour_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:h|hr|hrs|hour|hours)\b", text)
+    minute_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:m|min|mins|minute|minutes)\b", text)
+
+    if hour_match:
+        total_hours += float(hour_match.group(1))
+    if minute_match:
+        total_hours += float(minute_match.group(1)) / 60
+
+    if total_hours:
+        return total_hours
+
+    number_match = re.search(r"\d+(?:\.\d+)?", text)
+    return float(number_match.group(0)) if number_match else 0.0
+
+
+def _calculate_learning_hours(enrollments: List[models.Enrollment]) -> float:
+    total_hours = 0.0
+    for enrollment in enrollments:
+        if not enrollment.course:
+            continue
+
+        course_hours = _parse_duration_hours(enrollment.course.duration)
+        progress = 100.0 if _display_enrollment_status(enrollment) == "completed" else enrollment.progress or 0.0
+        progress = max(0.0, min(progress, 100.0))
+        total_hours += course_hours * (progress / 100)
+
+    return round(total_hours, 1)
 
 
 def _serialize_enrollment(enrollment: models.Enrollment) -> dict:
@@ -540,14 +577,21 @@ def get_user_dashboard(db: Session = Depends(database.get_db), user: models.User
 
 @app.get("/api/learner/analytics", response_model=schemas.LearnerAnalytics)
 def get_learner_analytics(db: Session = Depends(database.get_db), user: models.User = Depends(auth.get_current_active_user)):
-    enrollments = db.query(models.Enrollment).filter(models.Enrollment.user_id == user.id).all()
-    completed = [e for e in enrollments if e.status == "completed"]
+    enrollments = (
+        db.query(models.Enrollment)
+        .options(joinedload(models.Enrollment.course))
+        .filter(models.Enrollment.user_id == user.id)
+        .all()
+    )
+    completed = [e for e in enrollments if _display_enrollment_status(e) == "completed"]
+    in_progress = [e for e in enrollments if _display_enrollment_status(e) == "in-progress"]
+    certificates = db.query(models.Certificate).filter(models.Certificate.user_id == user.id).count()
     rate = (len(completed) / len(enrollments) * 100) if enrollments else 0
     return {
-        "courses_in_progress": len(enrollments) - len(completed),
-        "certificates_earned": len(completed),
-        "learning_hours": 12.5, # Mock
-        "completion_rate": rate
+        "courses_in_progress": len(in_progress),
+        "certificates_earned": certificates,
+        "learning_hours": _calculate_learning_hours(enrollments),
+        "completion_rate": round(rate, 1)
     }
 
 # ==================== ADMIN ROUTES ====================
@@ -915,17 +959,6 @@ def get_admin_analytics(db: Session = Depends(database.get_db), admin: models.Us
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/learner/analytics", response_model=schemas.LearnerAnalytics)
-def get_learner_analytics(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    courses_in_progress = db.query(models.Enrollment).filter(models.Enrollment.user_id == current_user.id, models.Enrollment.status == "in-progress").count()
-    certificates_earned = db.query(models.Certificate).filter(models.Certificate.user_id == current_user.id).count()
-    # Mock data for hours/rate for now
-    return {
-        "courses_in_progress": courses_in_progress,
-        "certificates_earned": certificates_earned,
-        "learning_hours": 15.4,
-        "completion_rate": 78.0
-    }
 @app.get("/api/users/me/dashboard", response_model=schemas.UserDashboard)
 def get_user_dashboard(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     # 1. Continue Learning (Enrollments in progress)
@@ -1352,18 +1385,6 @@ def delete_my_schedule(
     db.delete(schedule)
     db.commit()
     return {"success": True}
-
-@app.get("/api/learner/analytics")
-def get_learner_analytics(db: Session = Depends(database.get_db), user: models.User = Depends(auth.get_current_active_user)):
-    enrolled = db.query(models.Enrollment).filter(models.Enrollment.user_id == user.id).count()
-    completed = db.query(models.Enrollment).filter(models.Enrollment.user_id == user.id, models.Enrollment.status == "completed").count()
-    completion_rate = (completed / enrolled * 100) if enrolled > 0 else 0
-    return {
-        "enrolled_courses": enrolled,
-        "completed_courses": completed,
-        "completion_rate": round(completion_rate, 1),
-        "learning_hours": enrolled * 5 # Mock multiplier for hours
-    }
 
 @app.get("/api/courses/{course_id}/enrolled-users", response_model=List[schemas.User])
 def get_enrolled_users(course_id: int, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.get_admin_user)):
