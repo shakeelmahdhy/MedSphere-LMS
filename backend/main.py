@@ -107,6 +107,34 @@ def _serialize_enrollment(enrollment: models.Enrollment, db: Optional[Session] =
     return data
 
 
+def _attach_course_counts(db: Session, courses: list[models.Course]) -> list[models.Course]:
+    course_ids = [course.id for course in courses]
+    if not course_ids:
+        return courses
+
+    enrollment_counts = dict(
+        db.query(models.Enrollment.course_id, func.count(models.Enrollment.id))
+        .filter(models.Enrollment.course_id.in_(course_ids))
+        .group_by(models.Enrollment.course_id)
+        .all()
+    )
+    completed_counts = dict(
+        db.query(models.Enrollment.course_id, func.count(models.Enrollment.id))
+        .filter(
+            models.Enrollment.course_id.in_(course_ids),
+            (models.Enrollment.status == "completed") | (models.Enrollment.progress >= 100),
+        )
+        .group_by(models.Enrollment.course_id)
+        .all()
+    )
+
+    for course in courses:
+        course.enrolled_count = enrollment_counts.get(course.id, 0)
+        course.completed_count = completed_counts.get(course.id, 0)
+
+    return courses
+
+
 def _team_course_stats(db: Session, team: models.Team) -> tuple[list, int]:
     member_ids = [m.id for m in team.members]
     if team.admin_id and team.admin_id not in member_ids:
@@ -318,13 +346,14 @@ def get_courses(status: Optional[str] = None, db: Session = Depends(database.get
     query = db.query(models.Course).options(joinedload(models.Course.instructor))
     if status:
         query = query.filter(models.Course.status == status)
-    return query.all()
+    return _attach_course_counts(db, query.all())
 
 @app.get("/api/courses/{course_id}", response_model=schemas.Course)
 def get_course(course_id: int, db: Session = Depends(database.get_db)):
     course = db.query(models.Course).options(joinedload(models.Course.instructor)).filter(models.Course.id == course_id).first()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
+    _attach_course_counts(db, [course])
     return course
 
 @app.post("/api/courses", response_model=schemas.Course)

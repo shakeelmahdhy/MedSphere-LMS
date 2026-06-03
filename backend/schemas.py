@@ -173,6 +173,8 @@ class Course(CourseBase):
     instructor_id: int
     status: str
     created_at: datetime
+    enrolled_count: int = 0
+    completed_count: int = 0
     contents: List[CourseContent] = []
     instructor: Optional[User] = None
     quizzes: List[Quiz] = []

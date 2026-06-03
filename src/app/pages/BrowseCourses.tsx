@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { coursesAPI, userAPI } from '../../lib/api';
-import { Search, Filter, BookOpen, Clock, Award, ShoppingCart, CheckCircle, Info, Star } from 'lucide-react';
+import { Search, Filter, BookOpen, Clock, Award, ShoppingCart, CheckCircle, Info, Star, Users } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -101,10 +101,14 @@ export function BrowseCourses() {
               <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">{course.title}</h3>
               <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-1">{course.description}</p>
               
-              <div className="flex items-center gap-4 mb-6 text-sm text-gray-500">
+              <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-gray-500">
                 <div className="flex items-center gap-1">
                   <Clock size={16} />
                   {course.duration || 'Self-paced'}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Users size={16} />
+                  {course.enrolled_count || 0} Students
                 </div>
                 <div className="flex items-center gap-1 text-amber-500 font-semibold">
                   <Star size={16} fill="currentColor" />

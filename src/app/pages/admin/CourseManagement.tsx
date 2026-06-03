@@ -527,8 +527,8 @@ export function CourseManagement() {
                         )}
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-gray-700">{course.enrolled}</td>
-                    <td className="py-4 px-4 text-gray-700">{course.completed}</td>
+                    <td className="py-4 px-4 text-gray-700">{course.enrolled_count ?? course.enrolled ?? 0}</td>
+                    <td className="py-4 px-4 text-gray-700">{course.completed_count ?? course.completed ?? 0}</td>
                     <td className="py-4 px-4 text-gray-600 text-sm">{course.lastUpdated}</td>
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-2">
