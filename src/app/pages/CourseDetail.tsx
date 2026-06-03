@@ -145,6 +145,7 @@ export function CourseDetail() {
 
   const isPurchased = enrollment && enrollment.payment_status === 'paid';
   const isFreeCourse = Number(course.price || 0) <= 0;
+  const courseRating = Number(course.rating || 0);
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
@@ -171,7 +172,10 @@ export function CourseDetail() {
           <div className="flex flex-wrap items-center gap-6 text-sm md:text-base text-gray-200">
             <span className="flex items-center gap-2 font-medium"><Users size={18} /> {course.enrolled_count || 0} Students</span>
             <span className="flex items-center gap-2 font-medium"><Clock size={18} /> {course.duration || 'Self-paced'}</span>
-            <span className="flex items-center gap-2 font-medium"><Star size={18} className="text-amber-400 fill-amber-400" /> 4.8 Rating</span>
+            <span className="flex items-center gap-2 font-medium">
+              <Star size={18} className="text-amber-400 fill-amber-400" />
+              {courseRating > 0 ? `${courseRating.toFixed(1)} Rating` : 'New Course'}
+            </span>
           </div>
         </div>
       </div>

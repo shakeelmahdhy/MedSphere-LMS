@@ -129,6 +129,11 @@ export const authAPI = {
       body: JSON.stringify(data),
     }),
 
+  deleteAccount: () =>
+    apiClient<{ success: boolean }>('/auth/me', {
+      method: 'DELETE',
+    }),
+
   uploadProfilePicture: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -157,6 +162,7 @@ export interface Course {
   level: string;
   status: string;
   price: number;
+  rating?: number;
   duration: string;
   thumbnail_url?: string;
   instructor_id: number;
@@ -171,6 +177,7 @@ export interface CreateCourseRequest {
   category: string;
   type: string;
   price?: number;
+  rating?: number;
   duration?: string;
   level?: string;
   contents?: any[];

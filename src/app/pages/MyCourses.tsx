@@ -44,15 +44,21 @@ export function MyCourses() {
 
   const categories = ['all', ...Array.from(new Set(courses.map(c => c.course?.category || 'General')))];
 
+  const getTotalItems = (enrollment: any) => {
+    const apiTotal = Number(enrollment.total_items || 0);
+    if (apiTotal > 0) return apiTotal;
+    return (enrollment.course?.contents?.length || 0) + (enrollment.course?.quizzes?.length || 0);
+  };
+
   const filteredCourses = courses.map(enrollment => ({
     ...enrollment,
     title: enrollment.course?.title || 'Untitled Course',
     category: enrollment.course?.category || 'General',
     thumbnail: enrollment.course?.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop',
-    duration: enrollment.course?.duration || '0 hours',
+    duration: enrollment.course?.duration || 'Self-paced',
     instructor: 'Expert Instructor', // Placeholder as not in schema yet
-    totalLessons: 10,
-    completedLessons: Math.floor((enrollment.progress / 100) * 10),
+    totalItems: getTotalItems(enrollment),
+    completedItems: Number(enrollment.completed_items || 0),
     status: normalizeStatus(enrollment.status, enrollment.progress || 0),
   })).filter(course => {
     const matchesSearch = (course.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
@@ -308,7 +314,7 @@ export function MyCourses() {
                     </div>
                     <Progress value={course.progress} className="h-2" />
                     <p className="text-xs text-gray-500 mt-1">
-                      {course.completedLessons} of {course.totalLessons} lessons completed
+                      {Math.min(course.completedItems, course.totalItems)} of {course.totalItems} items completed
                     </p>
                   </div>
 

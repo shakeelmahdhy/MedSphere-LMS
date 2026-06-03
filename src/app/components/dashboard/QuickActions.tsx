@@ -38,14 +38,14 @@ export function QuickActions() {
   return (
     <div className="bg-white rounded-2xl p-6 border border-gray-200">
       <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 snap-x">
         {actions.map((action, index) => {
           const Icon = action.icon;
           return (
             <button
               key={index}
               onClick={() => navigate(action.path)}
-              className="group p-4 rounded-xl border-2 border-gray-200 hover:border-transparent hover:shadow-lg transition-all bg-white hover:bg-gradient-to-br hover:from-white hover:to-gray-50"
+              className="group min-w-[210px] sm:min-w-0 p-4 rounded-xl border-2 border-gray-200 hover:border-transparent hover:shadow-lg transition-all bg-white hover:bg-gradient-to-br hover:from-white hover:to-gray-50 snap-start"
             >
               <div className={`w-12 h-12 bg-gradient-to-br ${action.color} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
                 <Icon className="text-white" size={24} />

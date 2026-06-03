@@ -49,6 +49,7 @@ export function CourseManagement() {
     description: '',
     pricing_type: 'free' as 'free' | 'paid',
     price: 0,
+    rating: 0,
     type: 'Video',
     category: 'General',
     duration: '',
@@ -167,6 +168,7 @@ export function CourseManagement() {
       description: '',
       pricing_type: 'free',
       price: 0,
+      rating: 0,
       type: 'Video',
       category: 'General',
       duration: '',
@@ -261,6 +263,7 @@ export function CourseManagement() {
         description: '',
         pricing_type: 'free',
         price: 0,
+        rating: 0,
         type: 'Video',
         category: 'General',
         duration: '',
@@ -285,6 +288,7 @@ export function CourseManagement() {
       description: course.description,
       pricing_type: Number(course.price || 0) > 0 ? 'paid' : 'free',
       price: course.price || 0,
+      rating: course.rating || 0,
       type: course.type,
       category: course.category || 'General',
       duration: course.duration || '',
@@ -357,6 +361,7 @@ export function CourseManagement() {
                 description: '',
                 pricing_type: 'free',
                 price: 0,
+                rating: 0,
                 type: 'Video',
                 category: 'General',
                 duration: '',
@@ -754,6 +759,29 @@ export function CourseManagement() {
                         value={courseForm.category}
                         onChange={(e) => setCourseForm({ ...courseForm, category: e.target.value })}
                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Duration</label>
+                      <input
+                        type="text"
+                        value={courseForm.duration}
+                        onChange={(e) => setCourseForm({ ...courseForm, duration: e.target.value })}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="e.g. 4 hours"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="5"
+                        step="0.1"
+                        value={courseForm.rating}
+                        onChange={(e) => setCourseForm({ ...courseForm, rating: Math.max(0, Math.min(5, parseFloat(e.target.value) || 0)) })}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0.0 to 5.0"
                       />
                     </div>
                   </div>

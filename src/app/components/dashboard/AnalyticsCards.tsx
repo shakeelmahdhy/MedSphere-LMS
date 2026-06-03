@@ -66,20 +66,20 @@ export function AnalyticsCards() {
   ];
 
   if (loading) {
-    return <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
-      {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-gray-100 rounded-2xl"></div>)}
+    return <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 animate-pulse">
+      {[1, 2, 3, 4].map(i => <div key={i} className="h-32 min-w-[220px] sm:min-w-0 bg-gray-100 rounded-2xl"></div>)}
     </div>;
   }
 
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 snap-x">
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (
           <div
             key={index}
             onClick={() => navigate(stat.path)}
-            className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+            className="min-w-[220px] sm:min-w-0 bg-white rounded-2xl p-5 sm:p-6 border border-gray-200 hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98] snap-start"
           >
             <div className="flex items-start justify-between mb-4">
               <div className={`w-12 h-12 ${stat.bgColor} rounded-xl flex items-center justify-center`}>

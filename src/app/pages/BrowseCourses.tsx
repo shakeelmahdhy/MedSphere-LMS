@@ -36,6 +36,7 @@ export function BrowseCourses() {
   };
 
   const isFreeCourse = (course: any) => Number(course.price || 0) <= 0;
+  const getCourseRating = (course: any) => Number(course.rating || 0);
 
   const handleEnroll = async (courseId: number, title: string, isFree: boolean) => {
     try {
@@ -107,7 +108,7 @@ export function BrowseCourses() {
                 </div>
                 <div className="flex items-center gap-1 text-amber-500 font-semibold">
                   <Star size={16} fill="currentColor" />
-                  4.8
+                  {getCourseRating(course) > 0 ? getCourseRating(course).toFixed(1) : 'New'}
                 </div>
               </div>
 

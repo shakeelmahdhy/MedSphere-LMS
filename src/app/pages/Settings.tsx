@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Separator } from '../components/ui/separator';
 import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
-import { authAPI } from '../../lib/api';
+import { authAPI, userAPI } from '../../lib/api';
 
 export function Settings() {
   const [loading, setLoading] = useState(true);
@@ -44,6 +44,16 @@ export function Settings() {
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
+  const downloadJson = (filename: string, data: any) => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     fetchUserSettings();
@@ -99,10 +109,7 @@ export function Settings() {
     }
     
     try {
-      await authAPI.changePassword({
-        current_password: passwordData.current,
-        new_password: passwordData.newPassword
-      });
+      await authAPI.changePassword(passwordData.current, passwordData.newPassword);
       setPasswordData({ current: '', newPassword: '', confirm: '' });
       toast.success('Password updated successfully!');
     } catch (error: any) {
@@ -113,15 +120,41 @@ export function Settings() {
 
   const handleDeleteAccount = () => {
     if (deleteConfirmText === 'DELETE') {
-      localStorage.removeItem('mockUser');
-      toast.success('Account deleted. Redirecting to home...');
-      setShowDeleteConfirm(false);
-      setTimeout(() => {
-        window.location.href = '/';
-        window.location.hash = '';
-      }, 1500);
+      authAPI.deleteAccount()
+        .then(() => {
+          localStorage.clear();
+          toast.success('Account deleted. Redirecting to home...');
+          setShowDeleteConfirm(false);
+          setTimeout(() => {
+            window.location.href = '/';
+            window.location.hash = '';
+          }, 1500);
+        })
+        .catch((error: any) => {
+          toast.error(error.message || 'Failed to delete account');
+        });
     } else {
       toast.error('Please type DELETE to confirm account deletion');
+    }
+  };
+
+  const handleDownloadData = async () => {
+    try {
+      const [profile, courses, certificates] = await Promise.all([
+        authAPI.getCurrentUser(),
+        userAPI.getMyCourses(),
+        userAPI.getMyCertificates(),
+      ]);
+      downloadJson('medsphere-account-data.json', {
+        exported_at: new Date().toISOString(),
+        profile,
+        settings,
+        courses,
+        certificates,
+      });
+      toast.success('Account data downloaded');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to download account data');
     }
   };
 
@@ -514,11 +547,11 @@ export function Settings() {
               </div>
 
               <div className="space-y-3">
-                <Button variant="outline" className="w-full justify-start" onClick={() => toast.success('Preparing your data for download...')}>
+                <Button variant="outline" className="w-full justify-start" onClick={handleDownloadData}>
                   <Download size={20} className="mr-2" />
                   Download My Data
                 </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => toast.success('Data export request submitted! You\'ll receive an email shortly.')}>
+                <Button variant="outline" className="w-full justify-start" onClick={handleDownloadData}>
                   <Mail size={20} className="mr-2" />
                   Request Data Export
                 </Button>

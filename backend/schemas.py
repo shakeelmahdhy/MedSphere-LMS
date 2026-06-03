@@ -144,6 +144,7 @@ class CourseBase(BaseModel):
     category: str
     level: str = "Beginner"
     price: float = 0.0
+    rating: float = 0.0
     duration: str = "Self-paced"
     type: str = "Video"
     status: str = "published"
@@ -159,6 +160,7 @@ class CourseUpdate(BaseModel):
     category: Optional[str] = None
     level: Optional[str] = None
     price: Optional[float] = None
+    rating: Optional[float] = None
     duration: Optional[str] = None
     type: Optional[str] = None
     thumbnail_url: Optional[str] = None

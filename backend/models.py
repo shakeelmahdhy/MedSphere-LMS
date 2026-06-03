@@ -87,6 +87,7 @@ class Course(Base):
     title = Column(String, index=True)
     description = Column(String)
     price = Column(Float, default=0.0)
+    rating = Column(Float, default=0.0)
     type = Column(String) # Video, PDF, Quiz
     category = Column(String, default="General")
     status = Column(String, default="published") # published, draft, archived

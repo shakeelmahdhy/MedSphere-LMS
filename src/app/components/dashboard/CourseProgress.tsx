@@ -42,6 +42,11 @@ export function CourseProgress({ courses = [] }: { courses?: any[] }) {
                   {course.title}
                 </h3>
                 <p className="text-sm text-gray-600 mb-3">{course.instructor}</p>
+                {typeof course.totalItems === 'number' && (
+                  <p className="text-xs text-gray-500 mb-2">
+                    {Math.min(course.completedItems || 0, course.totalItems)} of {course.totalItems} items completed
+                  </p>
+                )}
                 
                 {/* Progress Bar */}
                 <div className="mb-2">

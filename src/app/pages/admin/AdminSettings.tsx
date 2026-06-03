@@ -89,9 +89,43 @@ export function AdminSettings() {
     toast.info('Settings reset to last saved state');
   };
 
+  const downloadJson = (filename: string, data: any) => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleExportConfig = () => {
+    downloadJson('medsphere-platform-settings.json', {
+      exported_at: new Date().toISOString(),
+      settings,
+    });
     toast.success('Configuration exported successfully!');
+  };
+
+  const handleCreateBackup = async () => {
+    try {
+      const savedSettings = await adminAPI.getSettings();
+      downloadJson('medsphere-settings-backup.json', {
+        backed_up_at: new Date().toISOString(),
+        settings: Object.keys(savedSettings).length > 0 ? savedSettings : settings,
+      });
+      toast.success('Settings backup downloaded');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create backup');
+    }
+  };
+
+  const handleSendTestEmail = () => {
+    if (!settings.fromEmail || !settings.fromEmail.includes('@')) {
+      toast.error('Please enter a valid from email address first');
+      return;
+    }
+    toast.info('Email delivery is not configured yet. SMTP settings were saved locally.');
   };
 
   return (
@@ -378,11 +412,11 @@ export function AdminSettings() {
               <Separator />
 
               <div className="flex items-center gap-3">
-                <Button onClick={() => toast.info('Sending test email...')}>
+                <Button onClick={handleSendTestEmail}>
                   <Mail size={16} className="mr-2" />
                   Send Test Email
                 </Button>
-                <Button variant="outline" onClick={() => toast.info('Viewing email templates')}>
+                <Button variant="outline" onClick={() => toast.info('Email template management is not available yet.')}>
                   View Email Templates
                 </Button>
               </div>
@@ -614,11 +648,11 @@ export function AdminSettings() {
               <Separator />
 
               <div className="flex items-center gap-3">
-                <Button onClick={() => toast.info('Creating backup...')}>
+                <Button onClick={handleCreateBackup}>
                   <Download size={16} className="mr-2" />
                   Create Backup Now
                 </Button>
-                <Button variant="outline" onClick={() => toast.info('Viewing backup history')}>
+                <Button variant="outline" onClick={() => toast.info('Backup history is not available yet. Use downloaded backups for now.')}>
                   View Backup History
                 </Button>
               </div>

@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Q
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 import os
@@ -77,9 +77,33 @@ def _calculate_learning_hours(enrollments: List[models.Enrollment]) -> float:
     return round(total_hours, 1)
 
 
-def _serialize_enrollment(enrollment: models.Enrollment) -> dict:
+def _course_item_counts(db: Session, enrollment: models.Enrollment) -> tuple[int, int]:
+    if not enrollment.course:
+        return 0, 0
+
+    total_contents = len(enrollment.course.contents or [])
+    total_quizzes = len(enrollment.course.quizzes or [])
+    completed_contents = len(enrollment.completed_contents or [])
+    passed_quizzes = 0
+
+    if total_quizzes:
+        quiz_ids = [quiz.id for quiz in enrollment.course.quizzes]
+        passed_quizzes = db.query(models.QuizAttempt.quiz_id).filter(
+            models.QuizAttempt.user_id == enrollment.user_id,
+            models.QuizAttempt.quiz_id.in_(quiz_ids),
+            models.QuizAttempt.passed == True,
+        ).distinct().count()
+
+    return total_contents + total_quizzes, completed_contents + passed_quizzes
+
+
+def _serialize_enrollment(enrollment: models.Enrollment, db: Optional[Session] = None) -> dict:
     data = schemas.EnrollmentWithCourse.model_validate(enrollment).model_dump()
     data["status"] = _display_enrollment_status(enrollment)
+    if db:
+        total_items, completed_items = _course_item_counts(db, enrollment)
+        data["total_items"] = total_items
+        data["completed_items"] = completed_items
     return data
 
 
@@ -119,6 +143,18 @@ def _team_course_stats(db: Session, team: models.Team) -> tuple[list, int]:
 
 # Create tables
 models.Base.metadata.create_all(bind=engine)
+
+def _ensure_course_rating_column():
+    with engine.begin() as connection:
+        dialect = engine.dialect.name
+        if dialect == "sqlite":
+            columns = [row[1] for row in connection.execute(text("PRAGMA table_info(courses)")).fetchall()]
+            if "rating" not in columns:
+                connection.execute(text("ALTER TABLE courses ADD COLUMN rating FLOAT DEFAULT 0.0"))
+        elif dialect in {"postgresql", "postgres"}:
+            connection.execute(text("ALTER TABLE courses ADD COLUMN IF NOT EXISTS rating DOUBLE PRECISION DEFAULT 0.0"))
+
+_ensure_course_rating_column()
 
 # Create default channel if none exists
 db = database.SessionLocal()
@@ -261,6 +297,15 @@ def change_password(
     db.commit()
     return {"success": True}
 
+@app.delete("/api/auth/me")
+def delete_current_account(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    current_user.is_active = False
+    db.commit()
+    return {"success": True}
+
 @app.get("/api/auth/admin-exists")
 def check_admin_exists(db: Session = Depends(database.get_db)):
     admin = db.query(models.User).filter(models.User.role == "admin").first()
@@ -292,6 +337,7 @@ def create_course(
         title=course.title,
         description=course.description,
         price=course.price,
+        rating=course.rating,
         type=course.type,
         category=course.category,
         status="published",
@@ -490,11 +536,11 @@ def complete_course_content(enrollment_id: int, content_id: int, db: Session = D
         completed_contents_count = db.query(models.CompletedContent).filter(models.CompletedContent.enrollment_id == enrollment_id).count()
         
         # Count unique passed quizzes
-        passed_quizzes_count = db.query(models.QuizAttempt).filter(
+        passed_quizzes_count = db.query(models.QuizAttempt.quiz_id).filter(
             models.QuizAttempt.user_id == current_user.id,
             models.QuizAttempt.quiz_id.in_([q.id for q in course.quizzes]),
             models.QuizAttempt.passed == True
-        ).distinct(models.QuizAttempt.quiz_id).count()
+        ).distinct().count()
 
         enrollment.progress = min(round(((completed_contents_count + passed_quizzes_count) / total_items) * 100, 2), 100.0)
     
@@ -582,13 +628,14 @@ def get_my_courses(db: Session = Depends(database.get_db), user: models.User = D
     enrollments = (
         db.query(models.Enrollment)
         .options(
-            joinedload(models.Enrollment.course),
+            joinedload(models.Enrollment.course).joinedload(models.Course.contents),
+            joinedload(models.Enrollment.course).joinedload(models.Course.quizzes),
             joinedload(models.Enrollment.completed_contents),
         )
         .filter(models.Enrollment.user_id == user.id)
         .all()
     )
-    return [_serialize_enrollment(e) for e in enrollments]
+    return [_serialize_enrollment(e, db) for e in enrollments]
 
 @app.get("/api/users/me/courses/{course_id}/progress")
 def get_course_progress(course_id: int, db: Session = Depends(database.get_db), user: models.User = Depends(auth.get_current_active_user)):
@@ -1009,7 +1056,11 @@ def get_admin_analytics(db: Session = Depends(database.get_db), admin: models.Us
 @app.get("/api/users/me/dashboard", response_model=schemas.UserDashboard)
 def get_user_dashboard(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     # 1. Continue Learning (Enrollments in progress)
-    enrollments = db.query(models.Enrollment).options(joinedload(models.Enrollment.course)).filter(
+    enrollments = db.query(models.Enrollment).options(
+        joinedload(models.Enrollment.course).joinedload(models.Course.contents),
+        joinedload(models.Enrollment.course).joinedload(models.Course.quizzes),
+        joinedload(models.Enrollment.completed_contents),
+    ).filter(
         models.Enrollment.user_id == current_user.id,
         models.Enrollment.payment_status == "paid"
     ).all()
@@ -1017,12 +1068,15 @@ def get_user_dashboard(db: Session = Depends(database.get_db), current_user: mod
     continue_learning = []
     for e in enrollments:
         if e.progress < 100:
+            total_items, completed_items = _course_item_counts(db, e)
             continue_learning.append({
                 "id": e.course.id,
                 "title": e.course.title,
                 "instructor": "Lead Instructor",
                 "progress": e.progress,
-                "timeLeft": "4 hours left", # Dummy calculation
+                "timeLeft": e.course.duration or "Self-paced",
+                "totalItems": total_items,
+                "completedItems": completed_items,
                 "color": "blue" if e.id % 3 == 0 else "green" if e.id % 3 == 1 else "purple"
             })
             
@@ -1186,12 +1240,14 @@ def submit_quiz(quiz_id: int, submission: schemas.QuizSubmission, db: Session = 
     ).first()
     
     if enrollment:
-        # Pass score update logic
-        new_progress = max(enrollment.progress, 20.0)
-        if score >= 70:
-             new_progress = max(new_progress, 100.0)
-        
-        enrollment.progress = min(new_progress, 100.0)
+        enrollment = db.query(models.Enrollment).options(
+            joinedload(models.Enrollment.course).joinedload(models.Course.contents),
+            joinedload(models.Enrollment.course).joinedload(models.Course.quizzes),
+            joinedload(models.Enrollment.completed_contents),
+        ).filter(models.Enrollment.id == enrollment.id).first()
+
+        total_items, completed_items = _course_item_counts(db, enrollment)
+        enrollment.progress = min(round((completed_items / total_items) * 100, 2), 100.0) if total_items else 100.0
         if enrollment.progress >= 100:
             enrollment.status = "completed"
             enrollment.completed_at = datetime.datetime.now()
