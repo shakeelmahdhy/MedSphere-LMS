@@ -717,17 +717,120 @@ def get_my_certificates_me(db: Session = Depends(database.get_db), user: models.
 
 @app.get("/api/users/me/dashboard")
 def get_user_dashboard(db: Session = Depends(database.get_db), user: models.User = Depends(auth.get_current_active_user)):
-    enrollments = db.query(models.Enrollment).filter(models.Enrollment.user_id == user.id).all()
-    certificates = db.query(models.Certificate).filter(models.Certificate.user_id == user.id).count()
-    
-    in_progress = [e for e in enrollments if e.status == "enrolled"]
-    completed = [e for e in enrollments if e.status == "completed"]
-    
+    enrollments = db.query(models.Enrollment).options(
+        joinedload(models.Enrollment.course).joinedload(models.Course.contents),
+        joinedload(models.Enrollment.course).joinedload(models.Course.quizzes),
+        joinedload(models.Enrollment.completed_contents),
+    ).filter(models.Enrollment.user_id == user.id).all()
+
+    continue_learning = []
+    for enrollment in enrollments:
+        if not enrollment.course or _display_enrollment_status(enrollment) == "completed":
+            continue
+
+        total_items, completed_items = _course_item_counts(db, enrollment)
+        continue_learning.append({
+            "id": enrollment.course.id,
+            "title": enrollment.course.title,
+            "instructor": enrollment.course.instructor.name if enrollment.course.instructor else "Lead Instructor",
+            "progress": enrollment.progress or 0,
+            "timeLeft": enrollment.course.duration or "Self-paced",
+            "totalItems": total_items,
+            "completedItems": completed_items,
+            "color": "blue" if enrollment.id % 3 == 0 else "green" if enrollment.id % 3 == 1 else "purple",
+            "timestamp": _normalize_timestamp(enrollment.enrolled_at),
+        })
+
+    continue_learning.sort(key=lambda item: item["timestamp"], reverse=True)
+    for item in continue_learning:
+        item.pop("timestamp", None)
+
+    recent_activities = []
+    latest_enrollments = sorted(
+        [enrollment for enrollment in enrollments if enrollment.course],
+        key=lambda enrollment: _normalize_timestamp(enrollment.enrolled_at),
+        reverse=True,
+    )[:3]
+    for enrollment in latest_enrollments:
+        recent_activities.append({
+            "title": f"Enrolled in {enrollment.course.title}",
+            "description": "Start learning today!",
+            "time": "Recently",
+            "icon": "PlayCircle",
+            "iconColor": "text-blue-600",
+            "iconBg": "bg-blue-50",
+            "link": f"/dashboard/courses/{enrollment.course.id}",
+            "timestamp": _normalize_timestamp(enrollment.enrolled_at),
+        })
+
+    for enrollment in enrollments:
+        if not enrollment.course or _display_enrollment_status(enrollment) != "completed":
+            continue
+        recent_activities.append({
+            "title": f"Completed {enrollment.course.title}",
+            "description": "Certificate earned!",
+            "time": "Recently",
+            "icon": "Award",
+            "iconColor": "text-green-600",
+            "iconBg": "bg-green-50",
+            "link": "/dashboard/certificates",
+            "timestamp": _normalize_timestamp(enrollment.completed_at or enrollment.enrolled_at),
+        })
+
+    recent_messages = db.query(models.Message).options(joinedload(models.Message.sender)).filter(
+        models.Message.receiver_id == user.id
+    ).order_by(models.Message.timestamp.desc()).limit(3).all()
+    for message in recent_messages:
+        recent_activities.append({
+            "title": f"Message from {message.sender.name if message.sender else 'Admin'}",
+            "description": message.content[:50] + ("..." if len(message.content) > 50 else ""),
+            "time": "New",
+            "icon": "Clock",
+            "iconColor": "text-purple-600",
+            "iconBg": "bg-purple-50",
+            "link": "/dashboard/messages",
+            "timestamp": _normalize_timestamp(message.timestamp),
+        })
+
+    notifications = db.query(models.Notification).filter(
+        models.Notification.user_id == user.id
+    ).order_by(models.Notification.created_at.desc()).limit(3).all()
+    for notification in notifications:
+        recent_activities.append({
+            "title": notification.title,
+            "description": notification.message,
+            "time": "Update",
+            "icon": "Clock",
+            "iconColor": "text-orange-600",
+            "iconBg": "bg-orange-50",
+            "link": "/dashboard/courses",
+            "timestamp": _normalize_timestamp(notification.created_at),
+        })
+
+    recent_activities.sort(key=lambda item: item.get("timestamp", _utc_now()), reverse=True)
+    for item in recent_activities:
+        item.pop("timestamp", None)
+
+    upcoming_tasks = []
+    now = _utc_now()
+    for enrollment in enrollments:
+        if not enrollment.course or _display_enrollment_status(enrollment) == "completed":
+            continue
+        due = _normalize_timestamp(enrollment.due_date or (enrollment.enrolled_at + datetime.timedelta(days=30)))
+        days_diff = (due - now).days
+        upcoming_tasks.append({
+            "id": enrollment.id,
+            "title": f"{enrollment.course.title} Deadline",
+            "type": "Course Deadline",
+            "dueDate": due.strftime("%Y-%m-%d"),
+            "priority": "high" if days_diff < 7 else "medium",
+            "color": "red" if days_diff < 7 else "orange",
+        })
+
     return {
-        "courses_in_progress": len(in_progress),
-        "certificates_earned": certificates,
-        "recent_courses": enrollments[:5],
-        "notifications": db.query(models.Notification).filter(models.Notification.user_id == user.id).limit(5).all()
+        "recent_activities": recent_activities[:5],
+        "continue_learning": continue_learning[:3],
+        "upcoming_tasks": upcoming_tasks[:5],
     }
 
 @app.get("/api/learner/analytics", response_model=schemas.LearnerAnalytics)

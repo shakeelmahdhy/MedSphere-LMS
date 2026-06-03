@@ -36,6 +36,17 @@ export function DashboardHome() {
     );
   }
 
+  const continueLearning = dashboardData?.continue_learning || [];
+  const recentActivities = dashboardData?.recent_activities || (dashboardData?.notifications || []).map((notification: any) => ({
+    title: notification.title,
+    description: notification.message,
+    time: 'Update',
+    icon: 'Clock',
+    iconColor: 'text-orange-600',
+    iconBg: 'bg-orange-50',
+    link: '/dashboard/courses',
+  }));
+
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
@@ -57,8 +68,8 @@ export function DashboardHome() {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Left Column - Activities & Progress */}
         <div className="lg:col-span-2 space-y-6">
-          <CourseProgress courses={dashboardData?.continue_learning || []} />
-          <RecentActivities activities={dashboardData?.recent_activities || []} />
+          <CourseProgress courses={continueLearning} />
+          <RecentActivities activities={recentActivities} />
         </div>
 
         {/* Right Column - Calendar */}

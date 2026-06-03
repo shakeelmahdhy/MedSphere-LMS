@@ -465,6 +465,8 @@ class ContinueLearning(BaseModel):
     instructor: str
     progress: float
     timeLeft: str
+    totalItems: Optional[int] = None
+    completedItems: Optional[int] = None
     image: Optional[str] = None
     color: str
 
