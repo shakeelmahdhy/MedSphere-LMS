@@ -9,7 +9,7 @@ export function Hero() {
   return (
     <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 overflow-hidden">
       {/* Navigation */}
-      <nav className="relative z-10 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <nav className="relative z-50 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             <img src="/logo.svg" alt="Medsphere Logo" className="h-10 sm:h-12 w-auto max-w-[190px] sm:max-w-none" />
@@ -41,7 +41,7 @@ export function Hero() {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 bg-white border-t shadow-lg">
+          <div className="md:hidden absolute top-full left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-2xl">
             <div className="px-6 py-4 flex flex-col gap-4">
               <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-gray-700 hover:text-blue-600 transition-colors py-2">Features</a>
               <a href="#benefits" onClick={() => setMobileMenuOpen(false)} className="text-gray-700 hover:text-blue-600 transition-colors py-2">Benefits</a>

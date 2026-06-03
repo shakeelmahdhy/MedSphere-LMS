@@ -88,6 +88,7 @@ export function AdminDashboardHome() {
   const quickActions = [
     {
       title: 'Create New Course',
+      mobileTitle: 'Create',
       icon: Plus,
       color: 'from-blue-500 to-indigo-600',
       description: 'Build from scratch or use AI',
@@ -95,6 +96,7 @@ export function AdminDashboardHome() {
     },
     {
       title: 'Course Management',
+      mobileTitle: 'Courses',
       icon: BookOpen,
       color: 'from-purple-500 to-pink-600',
       description: 'Edit and publish content',
@@ -102,6 +104,7 @@ export function AdminDashboardHome() {
     },
     {
       title: 'Add Learners',
+      mobileTitle: 'Learners',
       icon: UserPlus,
       color: 'from-green-500 to-teal-600',
       description: 'Add new individual learners',
@@ -109,6 +112,7 @@ export function AdminDashboardHome() {
     },
     {
       title: 'System Settings',
+      mobileTitle: 'Settings',
       icon: Settings,
       color: 'from-orange-500 to-red-600',
       description: 'Configure platform settings',
@@ -174,25 +178,28 @@ export function AdminDashboardHome() {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-100">
+      <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 md:p-6 shadow-lg border border-gray-100">
         <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
           <Activity size={24} className="text-blue-600" />
           Quick Actions
         </h2>
-        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto md:overflow-visible pb-2 md:pb-0 snap-x">
+        <div className="grid grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
           {quickActions.map((action, index) => {
             const Icon = action.icon;
             return (
               <Link
                 to={action.link}
                 key={index}
-                className="group min-w-[220px] md:min-w-0 p-5 md:p-6 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 hover:from-white hover:to-gray-50 border-2 border-gray-200 hover:border-blue-300 transition-all duration-300 hover:scale-105 hover:shadow-lg text-left block snap-start"
+                className="group min-w-0 p-2.5 md:p-6 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 hover:from-white hover:to-gray-50 border-2 border-gray-200 hover:border-blue-300 transition-all duration-300 hover:scale-105 hover:shadow-lg text-center md:text-left block"
               >
-                <div className={`w-12 h-12 bg-gradient-to-br ${action.color} rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-md`}>
-                  <Icon className="text-white" size={24} />
+                <div className={`w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br ${action.color} rounded-lg flex items-center justify-center mx-auto md:mx-0 mb-2 md:mb-4 group-hover:scale-110 transition-transform shadow-md`}>
+                  <Icon className="text-white" size={22} />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-1">{action.title}</h3>
-                <p className="text-sm text-gray-600">{action.description}</p>
+                <h3 className="font-semibold text-gray-900 text-[11px] leading-tight md:text-base md:mb-1">
+                  <span className="md:hidden">{action.mobileTitle}</span>
+                  <span className="hidden md:inline">{action.title}</span>
+                </h3>
+                <p className="hidden md:block text-sm text-gray-600">{action.description}</p>
               </Link>
             );
           })}
