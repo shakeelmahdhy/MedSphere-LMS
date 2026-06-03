@@ -9,9 +9,10 @@ import { Footer } from './components/Footer';
 import { Login } from './components/Login';
 import { Signup } from './components/Signup';
 import { router } from './routes.tsx';
+import { AboutUs } from './pages/AboutUs';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'home' | 'login' | 'signup' | 'dashboard'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'login' | 'signup' | 'dashboard' | 'about'>('home');
 
   useEffect(() => {
     // Function to handle hash changes and initial load
@@ -26,6 +27,8 @@ export default function App() {
         setCurrentPage('login');
       } else if (hash === 'signup' || path === '/signup') {
         setCurrentPage('signup');
+      } else if (hash === 'about' || path === '/about') {
+        setCurrentPage('about');
       } else if (hash === 'dashboard') {
         // Convert hash-based routing to path-based routing
         window.history.replaceState({}, '', '/dashboard');
@@ -59,6 +62,8 @@ export default function App() {
         <Login />
       ) : currentPage === 'signup' ? (
         <Signup />
+      ) : currentPage === 'about' ? (
+        <AboutUs />
       ) : currentPage === 'dashboard' ? (
         <RouterProvider router={router} />
       ) : (

@@ -3,8 +3,8 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 
 export function CTA() {
   return (
-    <section className="py-24 bg-white">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+    <section className="py-16 sm:py-20 lg:py-24 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 p-12 lg:p-16">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-10">
@@ -15,7 +15,7 @@ export function CTA() {
           </div>
 
           {/* Content */}
-          <div className="relative z-10 grid lg:grid-cols-2 gap-12 items-center">
+          <div className="relative z-10 grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
             {/* Left Column */}
             <div className="space-y-6">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium">
@@ -23,11 +23,11 @@ export function CTA() {
                 <span>Limited Time Offer</span>
               </div>
               
-              <h2 className="text-4xl lg:text-5xl font-bold text-white leading-tight">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
                 Start Your Free 14-Day Trial Today
               </h2>
               
-              <p className="text-xl text-blue-100 leading-relaxed">
+              <p className="text-lg sm:text-xl text-blue-100 leading-relaxed">
                 No credit card required. Get instant access to all courses and features. 
                 Cancel anytime.
               </p>
@@ -35,14 +35,14 @@ export function CTA() {
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <button
                   onClick={() => window.location.hash = 'signup'}
-                  className="group px-8 py-4 bg-white text-blue-600 rounded-xl hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-semibold"
+                  className="group px-6 sm:px-8 py-4 bg-white text-blue-600 rounded-xl hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-semibold"
                 >
                   Start Free Trial
                   <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                 </button>
                 <button
                   onClick={() => window.location.hash = 'login'}
-                  className="px-8 py-4 border-2 border-white text-white rounded-xl hover:bg-white/10 transition-colors font-semibold"
+                  className="px-6 sm:px-8 py-4 border-2 border-white text-white rounded-xl hover:bg-white/10 transition-colors font-semibold"
                 >
                   Schedule a Demo
                 </button>
@@ -77,7 +77,7 @@ export function CTA() {
                 <ImageWithFallback 
                   src="https://images.unsplash.com/photo-1592834448691-79fed8f0aae5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxlbGRlcmx5JTIwY2FyZSUyMHN1cHBvcnQlMjB3b3JrZXJ8ZW58MXx8fHwxNzcwMDMxNzkxfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
                   alt="Elderly care support worker"
-                  className="w-full h-[400px] object-cover"
+                  className="w-full h-[280px] sm:h-[360px] lg:h-[400px] object-cover"
                 />
               </div>
               

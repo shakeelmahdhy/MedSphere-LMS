@@ -9,17 +9,17 @@ export function Hero() {
   return (
     <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 overflow-hidden">
       {/* Navigation */}
-      <nav className="relative z-10 px-6 lg:px-8 py-6">
+      <nav className="relative z-10 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src="/logo.svg" alt="Medsphere Logo" className="h-12 w-auto" />
+          <div className="flex items-center gap-2 min-w-0">
+            <img src="/logo.svg" alt="Medsphere Logo" className="h-10 sm:h-12 w-auto max-w-[190px] sm:max-w-none" />
           </div>
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-gray-700 hover:text-blue-600 transition-colors">Features</a>
             <a href="#benefits" className="text-gray-700 hover:text-blue-600 transition-colors">Benefits</a>
-            <a href="#about" className="text-gray-700 hover:text-blue-600 transition-colors">About</a>
+            <a href="/about" className="text-gray-700 hover:text-blue-600 transition-colors">About</a>
             <a href="#contact" className="text-gray-700 hover:text-blue-600 transition-colors">Contact</a>
             <a href="#login" className="px-5 py-2.5 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
               Sign In
@@ -31,8 +31,9 @@ export function Hero() {
 
           {/* Mobile menu button */}
           <button 
-            className="md:hidden p-2"
+            className="md:hidden p-2 text-gray-800"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle navigation menu"
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -42,10 +43,10 @@ export function Hero() {
         {mobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 right-0 bg-white border-t shadow-lg">
             <div className="px-6 py-4 flex flex-col gap-4">
-              <a href="#features" className="text-gray-700 hover:text-blue-600 transition-colors py-2">Features</a>
-              <a href="#benefits" className="text-gray-700 hover:text-blue-600 transition-colors py-2">Benefits</a>
-              <a href="#about" className="text-gray-700 hover:text-blue-600 transition-colors py-2">About</a>
-              <a href="#contact" className="text-gray-700 hover:text-blue-600 transition-colors py-2">Contact</a>
+              <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-gray-700 hover:text-blue-600 transition-colors py-2">Features</a>
+              <a href="#benefits" onClick={() => setMobileMenuOpen(false)} className="text-gray-700 hover:text-blue-600 transition-colors py-2">Benefits</a>
+              <a href="/about" onClick={() => setMobileMenuOpen(false)} className="text-gray-700 hover:text-blue-600 transition-colors py-2">About</a>
+              <a href="#contact" onClick={() => setMobileMenuOpen(false)} className="text-gray-700 hover:text-blue-600 transition-colors py-2">Contact</a>
               <a href="#login" className="px-5 py-2.5 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors w-full text-center">
                 Sign In
               </a>
@@ -58,22 +59,22 @@ export function Hero() {
       </nav>
 
       {/* Hero Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 py-20 lg:py-32">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-32">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
           {/* Left Column - Text Content */}
           <div className="space-y-8">
             <div className="inline-block px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
               Trusted by 10,000+ Australian Care Workers
             </div>
             
-            <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
               Elevate Your{' '}
               <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 Aged Care Career
               </span>
             </h1>
             
-            <p className="text-xl text-gray-600 leading-relaxed">
+            <p className="text-lg sm:text-xl text-gray-600 leading-relaxed">
               Australia's leading e-learning platform for aged care professionals. 
               Access certified courses, stay compliant, and advance your career—all at your own pace.
             </p>
@@ -81,21 +82,21 @@ export function Hero() {
             <div className="flex flex-col sm:flex-row gap-4">
               <button
                 onClick={() => window.location.hash = 'signup'}
-                className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                className="group px-6 sm:px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
               >
                 Start Learning Free
                 <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </button>
               <button
                 onClick={() => window.location.hash = 'login'}
-                className="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-blue-600 hover:text-blue-600 transition-colors"
+                className="px-6 sm:px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-blue-600 hover:text-blue-600 transition-colors"
               >
                 Watch Demo
               </button>
             </div>
 
             {/* Stats */}
-            <div className="flex flex-wrap gap-8 pt-8 border-t border-gray-200">
+            <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-5 sm:gap-8 pt-8 border-t border-gray-200">
               <div>
                 <div className="font-bold text-3xl text-gray-900">200+</div>
                 <div className="text-gray-600">Certified Courses</div>
@@ -117,10 +118,10 @@ export function Hero() {
               <ImageWithFallback 
                 src="https://images.unsplash.com/photo-1765896387387-0538bc9f997e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhZ2VkJTIwY2FyZSUyMG51cnNlJTIwZWxkZXJseSUyMHBhdGllbnR8ZW58MXx8fHwxNzcwMDMxNzkwfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
                 alt="Aged care nurse with elderly patient"
-                className="w-full h-[500px] object-cover"
+                className="w-full h-[320px] sm:h-[420px] lg:h-[500px] object-cover"
               />
               {/* Floating Card */}
-              <div className="absolute bottom-6 left-6 right-6 bg-white rounded-xl p-6 shadow-xl">
+              <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 bg-white rounded-xl p-4 sm:p-6 shadow-xl">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                     <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

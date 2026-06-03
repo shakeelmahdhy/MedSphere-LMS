@@ -22,11 +22,12 @@ import { toast } from 'sonner';
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
+  onNavigate?: () => void;
 }
 
 
 
-export function Sidebar({ isOpen, onToggle }: SidebarProps) {
+export function Sidebar({ isOpen, onToggle, onNavigate }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [showHelpModal, setShowHelpModal] = useState(false);
@@ -70,9 +71,17 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   return (
     <>
+      {isOpen && (
+        <button
+          aria-label="Close navigation menu"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 lg:hidden"
+          onClick={onToggle}
+        />
+      )}
+
       <aside 
         className={`fixed top-0 left-0 h-screen bg-white border-r border-gray-200 transition-all duration-300 z-40 ${
-          isOpen ? 'w-64' : 'w-20'
+          isOpen ? 'translate-x-0 w-72 sm:w-64' : '-translate-x-full lg:translate-x-0 lg:w-20'
         }`}
       >
         <div className="flex flex-col h-full">
@@ -92,7 +101,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           {/* Toggle Button */}
           <button
             onClick={onToggle}
-            className="absolute -right-3 top-20 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-700 transition-colors shadow-lg"
+            className="absolute -right-3 top-20 w-6 h-6 bg-blue-600 rounded-full hidden lg:flex items-center justify-center text-white hover:bg-blue-700 transition-colors shadow-lg"
           >
             {isOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
           </button>
@@ -106,6 +115,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 <Link
                   key={index}
                   to={item.path}
+                  onClick={onNavigate}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                     isActive
                       ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
@@ -133,6 +143,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             {/* Settings */}
             <Link
               to="/dashboard/settings"
+              onClick={onNavigate}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                 location.pathname === '/dashboard/settings'
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'

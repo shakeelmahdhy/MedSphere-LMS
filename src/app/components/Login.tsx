@@ -51,7 +51,7 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-6">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4 sm:p-6">
       {/* Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700">
         {/* Animated Gradient Orbs */}
@@ -79,7 +79,7 @@ export function Login() {
 
 
       {/* Main Content */}
-      <div className="relative z-10 w-full max-w-6xl grid lg:grid-cols-2 gap-12 items-center">
+      <div className="relative z-10 w-full max-w-6xl grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
         {/* Left Side - Branding */}
         <div className="hidden lg:block text-white space-y-8 animate-slide-in-left">
           <div className="flex items-center gap-3 mb-8">
@@ -144,9 +144,9 @@ export function Login() {
           </div>
 
           {/* Login Card */}
-          <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/50">
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-8 border border-white/50">
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
               <p className="text-gray-600">Sign in to continue your learning journey</p>
             </div>
 
@@ -203,7 +203,7 @@ export function Login() {
               </div>
 
               {/* Remember Me & Forgot Password */}
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
                 <label className="flex items-center gap-2 cursor-pointer group">
                   <input
                     type="checkbox"
@@ -237,7 +237,7 @@ export function Login() {
             </div>
 
             {/* Social Login */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <button className="group py-3 px-4 border-2 border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all duration-300 flex items-center justify-center gap-2 hover:scale-105">
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

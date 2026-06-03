@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 import os
 import datetime
@@ -363,9 +364,55 @@ def delete_course(
     db_course = db.query(models.Course).filter(models.Course.id == course_id).first()
     if not db_course:
         raise HTTPException(status_code=404, detail="Course not found")
-    
-    db.delete(db_course)
-    db.commit()
+
+    content_ids = [
+        content_id
+        for (content_id,) in db.query(models.CourseContent.id)
+        .filter(models.CourseContent.course_id == course_id)
+        .all()
+    ]
+    quiz_ids = [
+        quiz_id
+        for (quiz_id,) in db.query(models.Quiz.id)
+        .filter(models.Quiz.course_id == course_id)
+        .all()
+    ]
+    enrollment_ids = [
+        enrollment_id
+        for (enrollment_id,) in db.query(models.Enrollment.id)
+        .filter(models.Enrollment.course_id == course_id)
+        .all()
+    ]
+
+    try:
+        if content_ids:
+            db.query(models.CompletedContent).filter(
+                models.CompletedContent.content_id.in_(content_ids)
+            ).delete(synchronize_session=False)
+
+        if enrollment_ids:
+            db.query(models.CompletedContent).filter(
+                models.CompletedContent.enrollment_id.in_(enrollment_ids)
+            ).delete(synchronize_session=False)
+
+        if quiz_ids:
+            db.query(models.QuizAttempt).filter(
+                models.QuizAttempt.quiz_id.in_(quiz_ids)
+            ).delete(synchronize_session=False)
+
+        db.query(models.Certificate).filter(
+            models.Certificate.course_id == course_id
+        ).update({models.Certificate.course_id: None}, synchronize_session=False)
+
+        db.delete(db_course)
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Course could not be deleted because related records still exist."
+        ) from exc
+
     return {"success": True}
 
 @app.post("/api/courses/{course_id}/buy")

@@ -47,6 +47,7 @@ export function CourseManagement() {
   const [courseForm, setCourseForm] = useState({
     title: '',
     description: '',
+    pricing_type: 'free' as 'free' | 'paid',
     price: 0,
     type: 'Video',
     category: 'General',
@@ -64,7 +65,9 @@ export function CourseManagement() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
 
-
+  const getUploadTitle = (filename: string) => {
+    return filename.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ').trim() || filename;
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'video' | 'pdf') => {
     const files = e.target.files;
@@ -91,7 +94,8 @@ export function CourseManagement() {
           setCourseForm(prev => ({
             ...prev,
             contents: [...prev.contents, { 
-              title: file.name, 
+              title: getUploadTitle(file.name),
+              original_filename: res.filename || file.name,
               content_type: type, 
               url: res.url, 
               order: prev.contents.length 
@@ -161,6 +165,7 @@ export function CourseManagement() {
     setCourseForm({
       title: '',
       description: '',
+      pricing_type: 'free',
       price: 0,
       type: 'Video',
       category: 'General',
@@ -231,17 +236,30 @@ export function CourseManagement() {
 
   const handleSaveCourse = async () => {
     try {
+      const contentMissingTitle = courseForm.contents.some((content) => !content.title?.trim());
+      if (contentMissingTitle) {
+        toast.error('Please add a title for every uploaded video and file');
+        return;
+      }
+
+      const { pricing_type, ...coursePayload } = courseForm;
+      const payload = {
+        ...coursePayload,
+        price: pricing_type === 'free' ? 0 : Number(courseForm.price) || 0,
+      };
+
       if (selectedCourse) {
-        await coursesAPI.update(selectedCourse.id, courseForm);
+        await coursesAPI.update(selectedCourse.id, payload);
         toast.success('Course updated successfully!');
       } else {
-        await coursesAPI.create(courseForm);
+        await coursesAPI.create(payload);
         toast.success('Course created successfully!');
       }
       setShowSuccess(true);
       setCourseForm({
         title: '',
         description: '',
+        pricing_type: 'free',
         price: 0,
         type: 'Video',
         category: 'General',
@@ -265,6 +283,7 @@ export function CourseManagement() {
     setCourseForm({
       title: course.title,
       description: course.description,
+      pricing_type: Number(course.price || 0) > 0 ? 'paid' : 'free',
       price: course.price || 0,
       type: course.type,
       category: course.category || 'General',
@@ -299,8 +318,9 @@ export function CourseManagement() {
       setShowDeleteModal(false);
       setSelectedCourse(null);
       fetchCourses();
-    } catch (error) {
-      toast.error('Failed to delete course');
+    } catch (error: any) {
+      const message = error?.message || 'Failed to delete course';
+      toast.error(message);
       console.error('Error deleting course:', error);
     }
   };
@@ -335,6 +355,7 @@ export function CourseManagement() {
               setCourseForm({
                 title: '',
                 description: '',
+                pricing_type: 'free',
                 price: 0,
                 type: 'Video',
                 category: 'General',
@@ -676,15 +697,56 @@ export function CourseManagement() {
                         placeholder="Enter course description"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Price ($)</label>
-                      <input
-                        type="number"
-                        value={courseForm.price}
-                        onChange={(e) => setCourseForm({ ...courseForm, price: parseFloat(e.target.value) })}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Course Access</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setCourseForm({ ...courseForm, pricing_type: 'free', price: 0 })}
+                          className={`p-4 rounded-xl border-2 text-left transition-all ${
+                            courseForm.pricing_type === 'free'
+                              ? 'border-green-500 bg-green-50 text-green-800'
+                              : 'border-gray-200 hover:border-green-300 text-gray-700'
+                          }`}
+                        >
+                          <div className="font-bold">Free</div>
+                          <div className="text-sm opacity-80">Learners can enroll without payment.</div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCourseForm({ ...courseForm, pricing_type: 'paid', price: courseForm.price || 1 })}
+                          className={`p-4 rounded-xl border-2 text-left transition-all ${
+                            courseForm.pricing_type === 'paid'
+                              ? 'border-blue-500 bg-blue-50 text-blue-800'
+                              : 'border-gray-200 hover:border-blue-300 text-gray-700'
+                          }`}
+                        >
+                          <div className="font-bold">Paid</div>
+                          <div className="text-sm opacity-80">Learners see a purchase action.</div>
+                        </button>
+                      </div>
                     </div>
+                    {courseForm.pricing_type === 'paid' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Price ($)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={courseForm.price}
+                          onChange={(e) => setCourseForm({ ...courseForm, price: parseFloat(e.target.value) || 0 })}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    )}
+                    {courseForm.pricing_type === 'free' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Price</label>
+                        <div className="w-full px-4 py-3 border-2 border-green-100 bg-green-50 text-green-700 rounded-xl font-semibold">
+                          Free course
+                        </div>
+                      </div>
+                    )}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                       <input
@@ -736,17 +798,36 @@ export function CourseManagement() {
                   
                   <div className="space-y-3">
                     {courseForm.contents.filter(c => c.content_type === 'video').map((item, idx) => (
-                      <div key={idx} className="p-4 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <FileVideo className="text-blue-600" size={20} />
-                          <span className="font-medium text-gray-700">{item.title}</span>
+                      <div key={`${item.url}-${idx}`} className="p-4 bg-gray-50 rounded-xl border border-gray-200 flex flex-col sm:flex-row sm:items-center gap-4">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                            <FileVideo size={20} />
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              Learner display title
+                            </label>
+                            <input
+                              value={item.title}
+                              onChange={(e) => {
+                                const contentIndex = courseForm.contents.indexOf(item);
+                                updateContentItem(contentIndex, 'title', e.target.value);
+                              }}
+                              className="w-full px-3 py-2 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium text-gray-800"
+                              placeholder="Enter a title learners will see"
+                            />
+                            <p className="text-xs text-gray-500 truncate">
+                              File: {item.original_filename || item.title}
+                            </p>
+                          </div>
                         </div>
                         <button 
                           onClick={() => {
                             const newContents = courseForm.contents.filter(c => c !== item);
                             setCourseForm({ ...courseForm, contents: newContents });
                           }}
-                          className="text-gray-400 hover:text-red-500"
+                          className="self-end sm:self-center text-gray-400 hover:text-red-500 p-2 rounded-lg hover:bg-red-50"
+                          aria-label={`Remove ${item.title || 'video upload'}`}
                         >
                           <Trash2 size={18} />
                         </button>
@@ -799,17 +880,36 @@ export function CourseManagement() {
                   
                   <div className="space-y-3">
                     {courseForm.contents.filter(c => c.content_type === 'pdf').map((item, idx) => (
-                      <div key={idx} className="p-4 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <FileText className="text-purple-600" size={20} />
-                          <span className="font-medium text-gray-700">{item.title}</span>
+                      <div key={`${item.url}-${idx}`} className="p-4 bg-gray-50 rounded-xl border border-gray-200 flex flex-col sm:flex-row sm:items-center gap-4">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className="w-10 h-10 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center flex-shrink-0">
+                            <FileText size={20} />
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              Learner display title
+                            </label>
+                            <input
+                              value={item.title}
+                              onChange={(e) => {
+                                const contentIndex = courseForm.contents.indexOf(item);
+                                updateContentItem(contentIndex, 'title', e.target.value);
+                              }}
+                              className="w-full px-3 py-2 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 font-medium text-gray-800"
+                              placeholder="Enter a title learners will see"
+                            />
+                            <p className="text-xs text-gray-500 truncate">
+                              File: {item.original_filename || item.title}
+                            </p>
+                          </div>
                         </div>
                         <button 
                           onClick={() => {
                             const newContents = courseForm.contents.filter(c => c !== item);
                             setCourseForm({ ...courseForm, contents: newContents });
                           }}
-                          className="text-gray-400 hover:text-red-500"
+                          className="self-end sm:self-center text-gray-400 hover:text-red-500 p-2 rounded-lg hover:bg-red-50"
+                          aria-label={`Remove ${item.title || 'PDF upload'}`}
                         >
                           <Trash2 size={18} />
                         </button>

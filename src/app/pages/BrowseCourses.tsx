@@ -35,15 +35,17 @@ export function BrowseCourses() {
     }
   };
 
-  const handleBuy = async (courseId: number, title: string) => {
+  const isFreeCourse = (course: any) => Number(course.price || 0) <= 0;
+
+  const handleEnroll = async (courseId: number, title: string, isFree: boolean) => {
     try {
       await coursesAPI.buy(courseId.toString());
       const enrollments = await userAPI.getMyCourses();
       setMyCourses(enrollments);
-      toast.success(`Successfully enrolled in "${title}"!`);
+      toast.success(isFree ? `Enrolled in "${title}"!` : `Successfully purchased "${title}"!`);
       navigate(`/dashboard/courses/${courseId}`);
     } catch (error) {
-      toast.error('Failed to complete purchase');
+      toast.error(isFree ? 'Failed to enroll in course' : 'Failed to complete purchase');
     }
   };
 
@@ -112,7 +114,9 @@ export function BrowseCourses() {
               <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                 <div>
                   <p className="text-xs text-gray-500 uppercase font-semibold">Price</p>
-                  <p className="text-2xl font-black text-gray-900">${course.price || 0}</p>
+                  <p className={`text-2xl font-black ${isFreeCourse(course) ? 'text-green-600' : 'text-gray-900'}`}>
+                    {isFreeCourse(course) ? 'Free' : `$${course.price || 0}`}
+                  </p>
                 </div>
                 {myCourses.some(mc => mc.course_id === course.id) ? (
                   <Button 
@@ -124,11 +128,11 @@ export function BrowseCourses() {
                   </Button>
                 ) : (
                   <Button 
-                    onClick={() => handleBuy(course.id, course.title)}
-                    className="bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg transition-all gap-2"
+                    onClick={() => handleEnroll(course.id, course.title, isFreeCourse(course))}
+                    className={`${isFreeCourse(course) ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'} shadow-md hover:shadow-lg transition-all gap-2`}
                   >
-                    <ShoppingCart size={18} />
-                    Buy Now
+                    {isFreeCourse(course) ? <BookOpen size={18} /> : <ShoppingCart size={18} />}
+                    {isFreeCourse(course) ? 'Enroll' : 'Buy Now'}
                   </Button>
                 )}
               </div>

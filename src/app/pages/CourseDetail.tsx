@@ -120,6 +120,12 @@ export function CourseDetail() {
     }
   };
 
+  const getContentTitle = (item: any) => {
+    if (item.title?.trim()) return item.title;
+    const filename = item.url?.split('/').pop()?.split('?')[0] || 'Course resource';
+    return decodeURIComponent(filename).replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -138,6 +144,7 @@ export function CourseDetail() {
   }
 
   const isPurchased = enrollment && enrollment.payment_status === 'paid';
+  const isFreeCourse = Number(course.price || 0) <= 0;
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
@@ -202,7 +209,7 @@ export function CourseDetail() {
               {selectedContent && (
                 <Card className="p-4 bg-black rounded-3xl overflow-hidden shadow-2xl border-none">
                   <div className="flex items-center justify-between mb-4 px-2">
-                    <h4 className="text-white font-bold">{selectedContent.title}</h4>
+                    <h4 className="text-white font-bold">{getContentTitle(selectedContent)}</h4>
                     <Button variant="ghost" className="text-white hover:bg-white/20" size="sm" onClick={() => setSelectedContent(null)}>
                       <X size={20} />
                     </Button>
@@ -222,7 +229,7 @@ export function CourseDetail() {
                       <iframe 
                         src={resolveMediaUrl(selectedContent.url)} 
                         className="w-full h-full rounded-2xl"
-                        title={selectedContent.title}
+                        title={getContentTitle(selectedContent)}
                       />
                     </div>
                   )}
@@ -252,7 +259,7 @@ export function CourseDetail() {
                             )}
                           </div>
                           <div>
-                            <h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{item.title}</h4>
+                            <h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{getContentTitle(item)}</h4>
                             <p className="text-sm text-gray-500 uppercase tracking-wider font-bold">{item.content_type}</p>
                           </div>
                         </div>
@@ -328,25 +335,39 @@ export function CourseDetail() {
             {!isPurchased ? (
               <div className="space-y-6">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-black text-gray-900">${course.price || 0}</span>
-                  <span className="text-gray-500 line-through text-lg font-medium">$199.99</span>
+                  <span className={`text-4xl font-black ${isFreeCourse ? 'text-green-600' : 'text-gray-900'}`}>
+                    {isFreeCourse ? 'Free' : `$${course.price || 0}`}
+                  </span>
+                  {!isFreeCourse && (
+                    <span className="text-gray-500 line-through text-lg font-medium">$199.99</span>
+                  )}
                 </div>
-                <p className="text-green-600 font-bold flex items-center gap-2">
-                  <Clock size={16} /> Limited time offer: 80% off!
-                </p>
+                {isFreeCourse ? (
+                  <p className="text-green-600 font-bold flex items-center gap-2">
+                    <BookOpen size={16} /> Free access available
+                  </p>
+                ) : (
+                  <p className="text-green-600 font-bold flex items-center gap-2">
+                    <Clock size={16} /> Limited time offer: 80% off!
+                  </p>
+                )}
                 <div className="space-y-3">
                   <Button 
                     onClick={handleBuy}
-                    className="w-full h-14 text-lg font-bold bg-blue-600 hover:bg-blue-700 rounded-2xl shadow-lg hover:shadow-blue-200 transition-all gap-3"
+                    className={`w-full h-14 text-lg font-bold rounded-2xl shadow-lg transition-all gap-3 ${isFreeCourse ? 'bg-green-600 hover:bg-green-700 hover:shadow-green-200' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-blue-200'}`}
                   >
-                    <ShoppingCart size={22} />
-                    Buy Now
+                    {isFreeCourse ? <BookOpen size={22} /> : <ShoppingCart size={22} />}
+                    {isFreeCourse ? 'Enroll Now' : 'Buy Now'}
                   </Button>
-                  <Button variant="outline" className="w-full h-14 text-lg font-bold rounded-2xl border-2">
-                    Add to Cart
-                  </Button>
+                  {!isFreeCourse && (
+                    <Button variant="outline" className="w-full h-14 text-lg font-bold rounded-2xl border-2">
+                      Add to Cart
+                    </Button>
+                  )}
                 </div>
-                <p className="text-center text-xs text-gray-400 font-medium">30-Day Money-Back Guarantee</p>
+                {!isFreeCourse && (
+                  <p className="text-center text-xs text-gray-400 font-medium">30-Day Money-Back Guarantee</p>
+                )}
                 
                 <Separator />
                 

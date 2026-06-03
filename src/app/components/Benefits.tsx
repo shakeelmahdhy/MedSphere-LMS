@@ -12,8 +12,8 @@ const benefits = [
 
 export function Benefits() {
   return (
-    <section id="benefits" className="py-24 bg-gradient-to-br from-gray-50 to-blue-50">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+    <section id="benefits" className="py-16 sm:py-20 lg:py-24 bg-gradient-to-br from-gray-50 to-blue-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left Column - Image */}
           <div className="relative order-2 lg:order-1">
@@ -21,12 +21,12 @@ export function Benefits() {
               <ImageWithFallback 
                 src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxoZWFsdGhjYXJlJTIwcHJvZmVzc2lvbmFsJTIwdHJhaW5pbmclMjBsYXB0b3B8ZW58MXx8fHwxNzcwMDMxNzkxfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
                 alt="Healthcare professional training on laptop"
-                className="w-full h-[600px] object-cover"
+                className="w-full h-[320px] sm:h-[460px] lg:h-[600px] object-cover"
               />
             </div>
             
             {/* Floating Stats Card */}
-            <div className="absolute -bottom-8 -right-8 bg-white rounded-2xl p-6 shadow-2xl max-w-xs">
+            <div className="sm:absolute sm:-bottom-8 sm:-right-8 mt-4 sm:mt-0 bg-white rounded-2xl p-5 sm:p-6 shadow-2xl max-w-xs">
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -50,10 +50,10 @@ export function Benefits() {
               <div className="inline-block px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium mb-4">
                 Your Success Matters
               </div>
-              <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
                 Invest in Your Professional Development
               </h2>
-              <p className="text-xl text-gray-600 leading-relaxed">
+              <p className="text-lg sm:text-xl text-gray-600 leading-relaxed">
                 Join thousands of Australian aged care workers who have transformed their careers 
                 through our comprehensive training programs.
               </p>
@@ -64,13 +64,13 @@ export function Benefits() {
               {benefits.map((benefit, index) => (
                 <div key={index} className="flex items-start gap-4 p-4 rounded-xl hover:bg-white transition-colors">
                   <CheckCircle2 className="text-green-500 flex-shrink-0 mt-1" size={24} />
-                  <span className="text-lg text-gray-700">{benefit}</span>
+                  <span className="text-base sm:text-lg text-gray-700">{benefit}</span>
                 </div>
               ))}
             </div>
 
             {/* Testimonial */}
-            <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-lg border border-gray-100">
               <div className="flex gap-1 mb-4">
                 {[...Array(5)].map((_, i) => (
                   <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">

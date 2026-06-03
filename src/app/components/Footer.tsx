@@ -8,7 +8,7 @@ export function Footer() {
 
   return (
     <footer id="contact" className="bg-gray-900 text-gray-300">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           {/* Company Info */}
           <div className="space-y-4">
@@ -40,7 +40,7 @@ export function Footer() {
             <h3 className="font-semibold text-white mb-4">Quick Links</h3>
             <ul className="space-y-3">
               <li><button onClick={() => window.location.hash = 'signup'} className="hover:text-blue-400 transition-colors">Browse Courses</button></li>
-              <li><button onClick={() => handleFooterLink('About Us')} className="hover:text-blue-400 transition-colors">About Us</button></li>
+              <li><a href="/about" className="hover:text-blue-400 transition-colors">About Us</a></li>
               <li><button onClick={() => handleFooterLink('How It Works')} className="hover:text-blue-400 transition-colors">How It Works</button></li>
               <li><button onClick={() => handleFooterLink('Pricing')} className="hover:text-blue-400 transition-colors">Pricing</button></li>
               <li><button onClick={() => handleFooterLink('Success Stories')} className="hover:text-blue-400 transition-colors">Success Stories</button></li>
