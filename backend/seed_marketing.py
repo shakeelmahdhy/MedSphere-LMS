@@ -275,6 +275,9 @@ def seed_marketing(*, reset: bool = True) -> None:
         db.add_all(courses)
         db.flush()
 
+        teams[0].courses.extend(courses[:4])
+        teams[1].courses.extend(courses[1:6])
+
         # Course content + quiz for first 5 published courses
         for idx, course in enumerate(courses[:5]):
             db.add_all(

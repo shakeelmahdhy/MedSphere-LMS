@@ -33,6 +33,7 @@ export function TeamManagement() {
   const [showViewTeamModal, setShowViewTeamModal] = useState(false);
   const [showDeleteTeamModal, setShowDeleteTeamModal] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [showAddCourseModal, setShowAddCourseModal] = useState(false);
   const [showCreateRoleModal, setShowCreateRoleModal] = useState(false);
   const [showEditRoleModal, setShowEditRoleModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
@@ -43,6 +44,7 @@ export function TeamManagement() {
   const [teams, setTeams] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
   const [teamCourses, setTeamCourses] = useState<any[]>([]);
   
   const [teamForm, setTeamForm] = useState({
@@ -64,14 +66,16 @@ export function TeamManagement() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [teamsList, rolesList, usersList] = await Promise.all([
+      const [teamsList, rolesList, usersList, coursesList] = await Promise.all([
         adminAPI.getTeams(),
         adminAPI.getRoles(),
-        adminAPI.getUsers()
+        adminAPI.getUsers(),
+        adminAPI.getCourses()
       ]);
       setTeams(teamsList);
       setRoles(rolesList);
       setUsers(usersList);
+      setCourses(coursesList);
     } catch (error) {
       toast.error('Failed to load team data');
     } finally {
@@ -162,6 +166,48 @@ export function TeamManagement() {
       fetchData();
     } catch (error) {
       toast.error('Failed to add member');
+    }
+  };
+
+  const openAddCourseModal = async (team: any) => {
+    try {
+      setSelectedTeam(team);
+      const assignedCourses = await adminAPI.getTeamCourses(team.id);
+      setTeamCourses(assignedCourses);
+      setShowAddCourseModal(true);
+    } catch (error) {
+      toast.error('Failed to load team courses');
+    }
+  };
+
+  const handleAddTeamCourse = async (courseId: string) => {
+    try {
+      const result = await adminAPI.addTeamCourse(selectedTeam.id, courseId);
+      const assignedCourses = await adminAPI.getTeamCourses(selectedTeam.id);
+      setTeamCourses(assignedCourses);
+      setShowAddCourseModal(false);
+      fetchData();
+      toast.success(
+        result.assigned_count > 0
+          ? `Course added and assigned to ${result.assigned_count} team member${result.assigned_count === 1 ? '' : 's'}`
+          : 'Course added to team'
+      );
+    } catch (error) {
+      toast.error('Failed to add course to team');
+    }
+  };
+
+  const handleRemoveTeamCourse = async (courseId: number) => {
+    if (!window.confirm('Remove this course from the team? Existing learner enrollments will stay in place.')) return;
+
+    try {
+      await adminAPI.removeTeamCourse(selectedTeam.id, courseId);
+      const assignedCourses = await adminAPI.getTeamCourses(selectedTeam.id);
+      setTeamCourses(assignedCourses);
+      fetchData();
+      toast.success('Course removed from team');
+    } catch (error) {
+      toast.error('Failed to remove course from team');
     }
   };
 
@@ -419,6 +465,13 @@ export function TeamManagement() {
                         Add
                       </button>
                       <button
+                        onClick={() => openAddCourseModal(team)}
+                        className="flex-1 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                      >
+                        <BookOpen size={16} />
+                        Course
+                      </button>
+                      <button
                         onClick={() => handleDeleteTeam(team)}
                         className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
                       >
@@ -612,6 +665,52 @@ export function TeamManagement() {
         </div>
       )}
 
+      {/* Add Course Modal */}
+      {showAddCourseModal && selectedTeam && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl animate-scale-in">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Add Course to {selectedTeam.name}</h2>
+              <button onClick={() => setShowAddCourseModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Course</label>
+                <select
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => {
+                    if (e.target.value) handleAddTeamCourse(e.target.value);
+                  }}
+                  defaultValue=""
+                >
+                  <option value="">Select a course...</option>
+                  {courses
+                    .filter((course) => !teamCourses.some((assigned) => assigned.id === course.id))
+                    .map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {course.title} {course.status ? `(${course.status})` : ''}
+                      </option>
+                    ))}
+                </select>
+                {courses.filter((course) => !teamCourses.some((assigned) => assigned.id === course.id)).length === 0 && (
+                  <p className="text-sm text-gray-500 mt-3">All available courses are already assigned to this team.</p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowAddCourseModal(false)}
+                className="px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Team Modal */}
       {showDeleteTeamModal && selectedTeam && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -645,16 +744,16 @@ export function TeamManagement() {
 
       {/* View Team Modal */}
       {showViewTeamModal && selectedTeam && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl animate-scale-in overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-8 text-white">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
-                    <UsersRound size={32} />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl animate-scale-in overflow-hidden max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-2rem)] flex flex-col">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 sm:p-8 text-white flex-shrink-0">
+              <div className="flex items-start justify-between gap-3 mb-4 sm:mb-6">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center flex-shrink-0">
+                    <UsersRound size={28} />
                   </div>
-                  <div>
-                    <h2 className="text-3xl font-bold">{selectedTeam.name}</h2>
+                  <div className="min-w-0">
+                    <h2 className="text-xl sm:text-3xl font-bold truncate">{selectedTeam.name}</h2>
                     <p className="text-blue-100 flex items-center gap-2 mt-1">
                       <Hash size={14} /> {selectedTeam.location}
                     </p>
@@ -664,33 +763,33 @@ export function TeamManagement() {
                   <X size={24} />
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-                  <p className="text-2xl font-bold">{selectedTeam.members?.length || 0}</p>
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 sm:p-4">
+                  <p className="text-xl sm:text-2xl font-bold">{selectedTeam.members?.length || 0}</p>
                   <p className="text-xs text-blue-100">Total Members</p>
                 </div>
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-                  <p className="text-2xl font-bold">{teamCourses.length}</p>
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 sm:p-4">
+                  <p className="text-xl sm:text-2xl font-bold">{teamCourses.length}</p>
                   <p className="text-xs text-blue-100">Active Courses</p>
                 </div>
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-                  <p className="text-2xl font-bold">85%</p>
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 sm:p-4">
+                  <p className="text-xl sm:text-2xl font-bold">85%</p>
                   <p className="text-xs text-blue-100">Compliance</p>
                 </div>
               </div>
             </div>
 
-            <div className="p-8 flex flex-col md:flex-row gap-8 overflow-y-auto max-h-[600px]">
+            <div className="p-4 sm:p-8 flex flex-col md:flex-row gap-6 md:gap-8 overflow-y-auto flex-1 min-h-0 custom-scrollbar">
               {/* Team Members List */}
               <div className="flex-1">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
                   <h3 className="text-xl font-bold text-gray-900">Team Members</h3>
                   <button 
                     onClick={() => {
                       setShowViewTeamModal(false);
                       setShowAddMemberModal(true);
                     }}
-                    className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-2 font-semibold"
+                    className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 font-semibold"
                   >
                     <UserPlus size={18} />
                     Add Member
@@ -728,11 +827,15 @@ export function TeamManagement() {
 
               {/* Team Courses List */}
               <div className="flex-1">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
                   <h3 className="text-xl font-bold text-gray-900">Enrolled Courses</h3>
-                  <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold uppercase">
-                    Team Progress
-                  </span>
+                  <button
+                    onClick={() => openAddCourseModal(selectedTeam)}
+                    className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 font-semibold"
+                  >
+                    <BookOpen size={18} />
+                    Add Course
+                  </button>
                 </div>
 
                 <div className="space-y-3">
@@ -753,6 +856,13 @@ export function TeamManagement() {
                             </p>
                           </div>
                         </div>
+                        <button
+                          onClick={() => handleRemoveTeamCourse(course.id)}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          title="Remove course from team"
+                        >
+                          <Trash2 size={18} />
+                        </button>
                       </div>
                     </div>
                   )) : (

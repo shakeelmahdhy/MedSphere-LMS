@@ -244,6 +244,7 @@ export const coursesAPI = {
 
 export const userAPI = {
   getMyCourses: () => apiClient<any[]>('/users/me/courses'),
+  getMyTeams: () => apiClient<any[]>('/users/me/teams'),
 
   getCourseProgress: (courseId: string) =>
     apiClient<any>(`/users/me/courses/${courseId}/progress`),
@@ -372,6 +373,17 @@ export const adminAPI = {
 
   removeTeamMember: (teamId: string | number, userId: string | number) =>
     apiClient<{ success: boolean }>(`/admin/teams/${teamId}/members/${userId}`, {
+      method: 'DELETE',
+    }),
+
+  addTeamCourse: (teamId: string | number, courseId: string | number) =>
+    apiClient<{ success: boolean; assigned_count: number }>(`/admin/teams/${teamId}/courses`, {
+      method: 'POST',
+      body: JSON.stringify({ course_id: courseId }),
+    }),
+
+  removeTeamCourse: (teamId: string | number, courseId: string | number) =>
+    apiClient<{ success: boolean }>(`/admin/teams/${teamId}/courses/${courseId}`, {
       method: 'DELETE',
     }),
   // Roles

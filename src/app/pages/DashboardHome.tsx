@@ -5,6 +5,7 @@ import { RecentActivities } from '../components/dashboard/RecentActivities';
 import { QuickActions } from '../components/dashboard/QuickActions';
 import { TaskCalendar } from '../components/dashboard/TaskCalendar';
 import { CourseProgress } from '../components/dashboard/CourseProgress';
+import { TeamAssignments } from '../components/dashboard/TeamAssignments';
 import { Loader2 } from 'lucide-react';
 
 export function DashboardHome() {
@@ -48,6 +49,9 @@ export function DashboardHome() {
 
       {/* Quick Actions */}
       <QuickActions />
+
+      {/* Team Course Guidance */}
+      <TeamAssignments />
 
       {/* Main Grid */}
       <div className="grid lg:grid-cols-3 gap-6">

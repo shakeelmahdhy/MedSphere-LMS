@@ -137,37 +137,69 @@ def _attach_course_counts(db: Session, courses: list[models.Course]) -> list[mod
 
 def _team_course_stats(db: Session, team: models.Team) -> tuple[list, int]:
     member_ids = [m.id for m in team.members]
-    if team.admin_id and team.admin_id not in member_ids:
-        member_ids.append(team.admin_id)
-    if not member_ids:
+    courses = list(team.courses or [])
+    if not courses:
         return [], 0
 
-    enrollments = (
-        db.query(models.Enrollment)
-        .options(joinedload(models.Enrollment.course))
-        .filter(models.Enrollment.user_id.in_(member_ids))
-        .all()
-    )
+    course_ids = [course.id for course in courses]
+    enrollment_counts = {}
+    completion_counts = {}
 
-    courses_dict = {}
-    for e in enrollments:
-        if not e.course:
-            continue
-        if e.course.id not in courses_dict:
-            courses_dict[e.course.id] = {
-                "id": e.course.id,
-                "title": e.course.title,
-                "thumbnail_url": e.course.thumbnail_url,
-                "category": e.course.category,
-                "enrollment_count": 0,
-                "completion_count": 0,
-            }
-        courses_dict[e.course.id]["enrollment_count"] += 1
-        if e.status == "completed" or (e.progress or 0) >= 100:
-            courses_dict[e.course.id]["completion_count"] += 1
+    if member_ids:
+        enrollment_counts = dict(
+            db.query(models.Enrollment.course_id, func.count(models.Enrollment.id))
+            .filter(
+                models.Enrollment.user_id.in_(member_ids),
+                models.Enrollment.course_id.in_(course_ids),
+            )
+            .group_by(models.Enrollment.course_id)
+            .all()
+        )
+        completion_counts = dict(
+            db.query(models.Enrollment.course_id, func.count(models.Enrollment.id))
+            .filter(
+                models.Enrollment.user_id.in_(member_ids),
+                models.Enrollment.course_id.in_(course_ids),
+                (models.Enrollment.status == "completed") | (models.Enrollment.progress >= 100),
+            )
+            .group_by(models.Enrollment.course_id)
+            .all()
+        )
 
-    courses = list(courses_dict.values())
-    return courses, len(courses)
+    return [
+        {
+            "id": course.id,
+            "title": course.title,
+            "description": course.description,
+            "thumbnail_url": course.thumbnail_url,
+            "category": course.category,
+            "duration": course.duration,
+            "status": course.status,
+            "enrollment_count": enrollment_counts.get(course.id, 0),
+            "completion_count": completion_counts.get(course.id, 0),
+        }
+        for course in courses
+    ], len(courses)
+
+
+def _assign_course_to_user(db: Session, user_id: int, course: models.Course, due_date: Optional[datetime.datetime] = None) -> bool:
+    existing = db.query(models.Enrollment).filter(
+        models.Enrollment.user_id == user_id,
+        models.Enrollment.course_id == course.id,
+    ).first()
+    if existing:
+        return False
+
+    db.add(models.Enrollment(
+        user_id=user_id,
+        course_id=course.id,
+        due_date=due_date,
+        status="not-started",
+        progress=0.0,
+        payment_status="paid",
+    ))
+    create_notification(db, user_id, "New Team Course", f"You have been assigned to: {course.title}")
+    return True
 
 # Create tables
 models.Base.metadata.create_all(bind=engine)
@@ -717,13 +749,66 @@ def get_learner_analytics(db: Session = Depends(database.get_db), user: models.U
         "completion_rate": round(rate, 1)
     }
 
+@app.get("/api/users/me/teams")
+def get_my_teams(db: Session = Depends(database.get_db), user: models.User = Depends(auth.get_current_active_user)):
+    teams = (
+        db.query(models.Team)
+        .options(
+            joinedload(models.Team.admin),
+            joinedload(models.Team.courses).joinedload(models.Course.contents),
+            joinedload(models.Team.courses).joinedload(models.Course.quizzes),
+        )
+        .join(models.team_members)
+        .filter(models.team_members.c.user_id == user.id)
+        .all()
+    )
+
+    enrollments = (
+        db.query(models.Enrollment)
+        .options(joinedload(models.Enrollment.completed_contents), joinedload(models.Enrollment.course))
+        .filter(models.Enrollment.user_id == user.id)
+        .all()
+    )
+    enrollment_by_course = {enrollment.course_id: enrollment for enrollment in enrollments}
+
+    result = []
+    for team in teams:
+        courses = []
+        for course in team.courses:
+            enrollment = enrollment_by_course.get(course.id)
+            total_items = 0
+            completed_items = 0
+            if enrollment:
+                total_items, completed_items = _course_item_counts(db, enrollment)
+            courses.append({
+                "id": course.id,
+                "title": course.title,
+                "description": course.description,
+                "category": course.category,
+                "duration": course.duration,
+                "thumbnail_url": course.thumbnail_url,
+                "progress": enrollment.progress if enrollment else 0,
+                "status": _display_enrollment_status(enrollment) if enrollment else "not-started",
+                "total_items": total_items,
+                "completed_items": completed_items,
+            })
+        result.append({
+            "id": team.id,
+            "name": team.name,
+            "location": team.location,
+            "admin": {"id": team.admin.id, "name": team.admin.name} if team.admin else None,
+            "courses": courses,
+        })
+
+    return result
+
 # ==================== ADMIN ROUTES ====================
 
 @app.get("/api/admin/team-learning-stats/{team_id}")
 def get_team_courses(team_id: int, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.get_admin_user)):
     team = (
         db.query(models.Team)
-        .options(joinedload(models.Team.members))
+        .options(joinedload(models.Team.members), joinedload(models.Team.courses))
         .filter(models.Team.id == team_id)
         .first()
     )
@@ -860,6 +945,7 @@ def get_admin_teams(db: Session = Depends(database.get_db), admin: models.User =
     teams = db.query(models.Team).options(
         joinedload(models.Team.admin),
         joinedload(models.Team.members),
+        joinedload(models.Team.courses),
     ).all()
     result = []
     for team in teams:
@@ -899,7 +985,12 @@ def delete_admin_team(team_id: int, db: Session = Depends(database.get_db), admi
     return {"success": True}
 @app.post("/api/admin/teams/{team_id}/members")
 def add_team_member(team_id: int, data: dict, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.get_admin_user)):
-    team = db.query(models.Team).filter(models.Team.id == team_id).first()
+    team = (
+        db.query(models.Team)
+        .options(joinedload(models.Team.courses))
+        .filter(models.Team.id == team_id)
+        .first()
+    )
     if not team: raise HTTPException(status_code=404, detail="Team not found")
     
     user_id = data.get("user_id")
@@ -909,6 +1000,8 @@ def add_team_member(team_id: int, data: dict, db: Session = Depends(database.get
     if user not in team.members:
         team.members.append(user)
         create_notification(db, user_id, "Added to Team", f"You have been added to team: {team.name}")
+        for course in team.courses:
+            _assign_course_to_user(db, user.id, course)
         db.commit()
     return {"success": True}
 
@@ -924,6 +1017,54 @@ def remove_team_member(team_id: int, user_id: int, db: Session = Depends(databas
         team.members.remove(user)
         db.commit()
     
+    return {"success": True}
+
+@app.post("/api/admin/teams/{team_id}/courses")
+def add_team_course(team_id: int, data: dict, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.get_admin_user)):
+    team = (
+        db.query(models.Team)
+        .options(joinedload(models.Team.members), joinedload(models.Team.courses))
+        .filter(models.Team.id == team_id)
+        .first()
+    )
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    course_id = data.get("course_id")
+    course = db.query(models.Course).filter(models.Course.id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    if course not in team.courses:
+        team.courses.append(course)
+
+    assigned_count = 0
+    for member in team.members:
+        if _assign_course_to_user(db, member.id, course):
+            assigned_count += 1
+
+    db.commit()
+    return {"success": True, "assigned_count": assigned_count}
+
+@app.delete("/api/admin/teams/{team_id}/courses/{course_id}")
+def remove_team_course(team_id: int, course_id: int, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.get_admin_user)):
+    team = (
+        db.query(models.Team)
+        .options(joinedload(models.Team.courses))
+        .filter(models.Team.id == team_id)
+        .first()
+    )
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    course = db.query(models.Course).filter(models.Course.id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    if course in team.courses:
+        team.courses.remove(course)
+        db.commit()
+
     return {"success": True}
 
 @app.get("/api/admin/roles", response_model=List[schemas.Role])

@@ -11,6 +11,14 @@ team_members = Table(
     Column("user_id", Integer, ForeignKey("users.id"), primary_key=True)
 )
 
+# Association table for Team Courses
+team_courses = Table(
+    "team_courses",
+    Base.metadata,
+    Column("team_id", Integer, ForeignKey("teams.id"), primary_key=True),
+    Column("course_id", Integer, ForeignKey("courses.id"), primary_key=True)
+)
+
 # Association table for Channel Members
 channel_members = Table(
     "channel_members",
@@ -47,6 +55,7 @@ class Team(Base):
 
     admin = relationship("User", foreign_keys=[admin_id])
     members = relationship("User", secondary=team_members, back_populates="teams")
+    courses = relationship("Course", secondary=team_courses, back_populates="teams")
 
 class User(Base):
     __tablename__ = "users"
@@ -101,6 +110,7 @@ class Course(Base):
     contents = relationship("CourseContent", back_populates="course", cascade="all, delete-orphan")
     quizzes = relationship("Quiz", back_populates="course", cascade="all, delete-orphan")
     instructor = relationship("User")
+    teams = relationship("Team", secondary=team_courses, back_populates="courses")
 
 class CourseContent(Base):
     __tablename__ = "course_contents"
